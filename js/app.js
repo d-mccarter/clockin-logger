@@ -2,18 +2,28 @@ const App = {
   selected: new Set(), // "date|index"
 
   async init() {
-    this.bindNav();
-    this.bindControls();
-    this.bindSync();
-    this.bindModals();
-    await Storage.seedFromBundledFiles();
-    this.syncDelayInput();
-    this.renderTable();
-    this.updateDataProfileUI();
-    this.loadBuildLabel();
-    await Storage.init();
-    this.syncDelayInput();
-    this.renderTable();
+    try {
+      this.bindNav();
+      this.bindControls();
+      this.bindSync();
+      this.bindModals();
+      this.syncDelayInput();
+      this.updateDataProfileUI();
+      this.renderTable();
+      this.loadBuildLabel();
+
+      await ClockerStore.seedFromBundledFiles();
+      this.syncDelayInput();
+      this.renderTable();
+      this.flashStatus('');
+
+      await ClockerStore.init();
+      this.syncDelayInput();
+      this.renderTable();
+    } catch (error) {
+      console.error(error);
+      this.flashStatus(`Startup error: ${error.message || error}`, 'error');
+    }
   },
 
   bindNav() {
@@ -34,7 +44,7 @@ const App = {
 
   syncDelayInput() {
     const input = document.getElementById('delay-seconds');
-    if (input) input.value = Storage.getDelaySeconds();
+    if (input) input.value = ClockerStore.getDelaySeconds();
   },
 
   bindControls() {
@@ -47,9 +57,9 @@ const App = {
 
     const delayInput = document.getElementById('delay-seconds');
     const commitDelay = () => {
-      Storage.setDelaySeconds(delayInput.value);
+      ClockerStore.setDelaySeconds(delayInput.value);
       this.syncDelayInput();
-      this.flashStatus(`Delay set to ${Storage.getDelaySeconds()}s`);
+      this.flashStatus(`Delay set to ${ClockerStore.getDelaySeconds()}s`);
     };
     delayInput.addEventListener('change', commitDelay);
     document.getElementById('delay-down').addEventListener('click', () => {
@@ -79,11 +89,11 @@ const App = {
   },
 
   addFobPunch(direction) {
-    const delay = Storage.getDelaySeconds();
+    const delay = ClockerStore.getDelaySeconds();
     const adjusted = TimesFormat.applyDelay(new Date(), delay, direction);
     const isoDate = TimesFormat.dateToIsoDay(adjusted);
     const time24 = TimesFormat.dateToTime24(adjusted);
-    Storage.upsertPunch(isoDate, time24);
+    ClockerStore.upsertPunch(isoDate, time24);
     this.selected.clear();
     this.renderTable();
     const label = direction === 'in' ? 'FOB In' : 'FOB Out';
@@ -102,7 +112,7 @@ const App = {
       const [date, index] = key.split('|');
       return { date, index: parseInt(index, 10) };
     });
-    Storage.deleteSelected(selections);
+    ClockerStore.deleteSelected(selections);
     this.selected.clear();
     this.renderTable();
     this.flashStatus('Deleted selected time(s)');
@@ -111,7 +121,7 @@ const App = {
   renderTable() {
     const tbody = document.getElementById('times-table-body');
     const theadRow = document.getElementById('times-table-head-row');
-    const days = Storage.getDays().slice().reverse(); // newest first for phone use
+    const days = ClockerStore.getDays().slice().reverse(); // newest first for phone use
 
     const maxTimes = days.reduce((max, d) => Math.max(max, (d.times || []).length), 4);
 
@@ -228,7 +238,7 @@ const App = {
         return;
       }
       const time24 = timeVal.slice(0, 5);
-      Storage.upsertPunch(dateVal, time24);
+      ClockerStore.upsertPunch(dateVal, time24);
       modal.hidden = true;
       this.renderTable();
       this.flashStatus(`Added ${TimesFormat.formatDateMDY(dateVal)} ${TimesFormat.formatTime12(TimesFormat.parseTimeToken(time24))}`);
@@ -248,11 +258,11 @@ const App = {
         } else {
           data = TimesFormat.parseTimesTxt(text);
         }
-        if (!confirm(`Replace current ${Storage.getProfile().label} data with ${data.days.length} day(s) from ${file.name}?`)) {
+        if (!confirm(`Replace current ${ClockerStore.getProfile().label} data with ${data.days.length} day(s) from ${file.name}?`)) {
           e.target.value = '';
           return;
         }
-        Storage.replaceAll(data);
+        ClockerStore.replaceAll(data);
         this.syncDelayInput();
         this.renderTable();
         this.flashStatus(`Imported ${data.days.length} day(s)`);
@@ -263,7 +273,7 @@ const App = {
     });
 
     document.getElementById('export-times-btn')?.addEventListener('click', () => {
-      const data = Storage.load();
+      const data = ClockerStore.load();
       const txt = TimesFormat.toTimesTxt(data);
       const blob = new Blob([txt], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
@@ -275,12 +285,12 @@ const App = {
     });
 
     document.getElementById('export-json-btn')?.addEventListener('click', () => {
-      const data = Storage.load();
+      const data = ClockerStore.load();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = Storage.getProfile().path.split('/').pop();
+      a.download = ClockerStore.getProfile().path.split('/').pop();
       a.click();
       URL.revokeObjectURL(url);
     });
@@ -295,7 +305,7 @@ const App = {
   },
 
   updateDataProfileUI() {
-    const profile = Storage.getProfile();
+    const profile = ClockerStore.getProfile();
     document.querySelectorAll('[data-profile]').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset.profile === profile.id);
     });
@@ -339,13 +349,13 @@ const App = {
       owner: fields.owner.value,
       repo: fields.repo.value,
       branch: 'main',
-      path: Storage.getProfile().path,
+      path: ClockerStore.getProfile().path,
       token: fields.token.value
     });
 
     const saveSettingsFromForm = () => {
       const settings = readSettings();
-      Storage.saveSyncSettings(settings);
+      ClockerStore.saveSyncSettings(settings);
       return settings;
     };
 
@@ -363,25 +373,25 @@ const App = {
 
     const runInitialSync = async (settings) => {
       const { data: remote, sha } = await GitHubSync.fetchRemote(settings);
-      const local = Storage.load();
+      const local = ClockerStore.load();
 
-      Storage._fileSha = sha;
+      ClockerStore._fileSha = sha;
 
-      if (Storage.isEmpty(remote) && !Storage.isEmpty(local)) {
-        await Storage.pushToGitHub({ settings });
+      if (ClockerStore.isEmpty(remote) && !ClockerStore.isEmpty(local)) {
+        await ClockerStore.pushToGitHub({ settings });
       } else {
-        await Storage.pullFromGitHub({ settings });
+        await ClockerStore.pullFromGitHub({ settings });
         refreshAfterSync();
       }
     };
 
     const switchDataProfile = async (profileId) => {
-      if (profileId === Storage.getProfileId()) return;
+      if (profileId === ClockerStore.getProfileId()) return;
 
-      const profile = Storage.setProfile(profileId);
+      const profile = ClockerStore.setProfile(profileId);
       this.selected.clear();
       this.updateDataProfileUI();
-      await Storage.seedFromBundledFiles();
+      await ClockerStore.seedFromBundledFiles();
       refreshAfterSync();
 
       const settings = saveSettingsFromForm();
@@ -398,9 +408,9 @@ const App = {
       }
     };
 
-    Storage.onSyncStatus = (message, type) => setStatus(message, type);
+    ClockerStore.onSyncStatus = (message, type) => setStatus(message, type);
 
-    applySettings(Storage.getSyncSettings());
+    applySettings(ClockerStore.getSyncSettings());
     this.updateDataProfileUI();
 
     document.querySelectorAll('[data-profile]').forEach((btn) => {
@@ -464,7 +474,7 @@ const App = {
     document.getElementById('sync-pull-btn').addEventListener('click', async () => {
       const settings = saveSettingsFromForm();
       try {
-        await Storage.pullFromGitHub({ settings });
+        await ClockerStore.pullFromGitHub({ settings });
         refreshAfterSync();
       } catch (error) {
         setStatus(error.message, 'error');
@@ -474,7 +484,7 @@ const App = {
     document.getElementById('sync-push-btn').addEventListener('click', async () => {
       const settings = saveSettingsFromForm();
       try {
-        await Storage.pushToGitHub({ settings });
+        await ClockerStore.pushToGitHub({ settings });
       } catch (error) {
         setStatus(error.message, 'error');
       }

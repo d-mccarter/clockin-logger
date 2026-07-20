@@ -122,9 +122,17 @@ const GitHubSync = {
     settings = this.normalizeSettings(settings);
     this.validateToken(settings);
 
-    const response = await fetch(this.readApiUrl(settings), {
-      headers: this.headers(settings)
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+    let response;
+    try {
+      response = await fetch(this.readApiUrl(settings), {
+        headers: this.headers(settings),
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timer);
+    }
 
     if (response.status === 404) {
       return { data: TimesFormat.emptyData(), sha: null };
