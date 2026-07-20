@@ -20,6 +20,8 @@ const ClockerStore = {
   _fileSha: null,
   _pushTimer: null,
   _pushInFlight: null,
+  /** Debounce before auto-push after a local change (ms). */
+  AUTO_PUSH_DELAY_MS: 1500,
   onSyncStatus: null,
 
   getProfiles() {
@@ -197,7 +199,7 @@ const ClockerStore = {
   },
 
   async _pushWithRetry(settings, silent) {
-    if (!silent) this.setSyncStatus('Saving to GitHub…', 'info');
+    this.setSyncStatus(silent ? 'Syncing…' : 'Saving to GitHub…', 'info');
 
     let lastError = null;
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -209,10 +211,11 @@ const ClockerStore = {
           this.save(data, { sync: false });
         }
         this._fileSha = await GitHubSync.pushRemote(settings, data, remote.sha);
-        if (!silent) {
-          const note = attempt > 0 ? ' (resolved sync conflict)' : '';
-          this.setSyncStatus(`Saved to GitHub${note}`, 'success');
-        }
+        const note = attempt > 0 ? ' (resolved sync conflict)' : '';
+        this.setSyncStatus(
+          silent ? `Synced to GitHub${note}` : `Saved to GitHub${note}`,
+          'success'
+        );
         return;
       } catch (error) {
         lastError = error;
@@ -247,7 +250,7 @@ const ClockerStore = {
     clearTimeout(this._pushTimer);
     this._pushTimer = setTimeout(() => {
       this.pushToGitHub({ silent: true }).catch(() => {});
-    }, 1500);
+    }, this.AUTO_PUSH_DELAY_MS);
   },
 
   getDays() {

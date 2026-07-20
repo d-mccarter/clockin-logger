@@ -8,9 +8,9 @@ Open that URL in Safari, then **Share → Add to Home Screen** for a full-screen
 
 ## Features
 
-- **FOB In Now / FOB Out Now** — one-tap punches with delay adjustment
-- **Delay Seconds** — subtracts on In (door → desk), adds on Out (desk → door)
+- **FOB In Now / FOB Out Now** — one-tap punches at the current time
 - **Times table** — dates, punches, and calculated total hours (same pairing logic as LabVIEW)
+- **Charts** — first clock-in, last clock-out, and hours per day
 - **Add Custom Time** / **Delete Selected** — fix missed or wrong punches
 - **Real / Test data profiles** — separate local + GitHub files (same idea as Guitar Practice App)
 - **GitHub sync** — pull/push `data/times-data.json` (or test file) with a personal access token
@@ -49,6 +49,8 @@ JSON shape:
 }
 ```
 
+`settings.delaySeconds` is retained for file compatibility but is no longer used by the app.
+
 LabVIEW-compatible `times.txt` is tab-delimited (CRLF), with empty punch cells allowed and no trailing totals column:
 
 ```text
@@ -65,6 +67,8 @@ Total hours in the app = paired in/out differences (empty cells are skipped when
 3. Turn on **Auto-sync**, or use **Pull** / **Push** manually
 4. Switch **Real** / **Test** to change which file is used
 
+**Auto-sync timing:** not a polling interval. When enabled, Clocker syncs once on app open, then pushes about **1.5 seconds** after each local change (debounced).
+
 ## Tech
 
-Vanilla HTML, CSS, and JavaScript — no build step. Service worker for offline/home-screen use.
+Vanilla HTML, CSS, and JavaScript — no build step.

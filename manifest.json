@@ -1,7 +1,7 @@
 {
   "name": "Clocker",
   "short_name": "Clocker",
-  "description": "Track work clock-in and clock-out times with FOB delay adjustment",
+  "description": "Track work clock-in and clock-out times",
   "start_url": "./?_shell=13",
   "display": "standalone",
   "background_color": "#d8dde4",
