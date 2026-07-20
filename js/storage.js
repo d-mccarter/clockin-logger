@@ -69,11 +69,11 @@ const ClockerStore = {
   load() {
     try {
       const raw = localStorage.getItem(this.storageKey());
-      if (!raw) return TimesFormat.emptyData(this.getDelaySeconds());
+      if (!raw) return TimesFormat.emptyData(this.readDelaySeconds());
       const data = this.normalize(JSON.parse(raw));
       return data;
     } catch {
-      return TimesFormat.emptyData(this.getDelaySeconds());
+      return TimesFormat.emptyData(this.readDelaySeconds());
     }
   },
 
@@ -89,7 +89,8 @@ const ClockerStore = {
     return normalized;
   },
 
-  getDelaySeconds() {
+  /** Read delay without touching load() — avoids recursion on empty storage. */
+  readDelaySeconds() {
     try {
       const raw = localStorage.getItem(DELAY_KEY);
       if (raw != null && raw !== '') {
@@ -99,7 +100,11 @@ const ClockerStore = {
     } catch {
       /* ignore */
     }
-    return this.load().settings.delaySeconds ?? 60;
+    return 60;
+  },
+
+  getDelaySeconds() {
+    return this.readDelaySeconds();
   },
 
   setDelaySeconds(seconds, options = {}) {
