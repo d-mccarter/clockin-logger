@@ -342,6 +342,7 @@ body {
 
 .times-table th.col-date {
   z-index: 3;
+  left: 0;
   background: #b7d0e8;
 }
 
