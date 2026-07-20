@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#e87a2e">
+  <title>Clocker</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css?v=1">
+</head>
+<body>
+  <header class="app-header">
+    <h1 id="page-title">Clocker</h1>
+    <span class="profile-badge" id="profile-badge" hidden>Test data</span>
+    <span class="build-label" id="build-label">Build …</span>
+  </header>
+
+  <main id="app">
+    <section id="view-clock" class="view active">
+      <div class="fob-stack">
+        <button type="button" class="btn-fob" id="fob-in-btn">FOB In Now</button>
+        <button type="button" class="btn-fob" id="fob-out-btn">FOB Out Now</button>
+      </div>
+
+      <div class="delay-panel">
+        <span class="delay-label">Delay Seconds</span>
+        <div class="number-stepper">
+          <button type="button" class="btn-step" id="delay-down" aria-label="Decrease delay">−</button>
+          <input type="number" id="delay-seconds" value="60" step="5" aria-label="Delay seconds">
+          <button type="button" class="btn-step" id="delay-up" aria-label="Increase delay">+</button>
+        </div>
+        <p class="field-hint">In subtracts delay (door → desk). Out adds delay (desk → door).</p>
+      </div>
+
+      <div class="action-row">
+        <button type="button" class="btn-action" id="add-custom-btn">Add Custom Time</button>
+        <button type="button" class="btn-action btn-danger" id="delete-selected-btn">Delete Selected</button>
+      </div>
+
+      <p class="clock-status" id="clock-status" aria-live="polite"></p>
+      <p class="week-summary" id="week-summary"></p>
+
+      <div class="table-wrap">
+        <table class="times-table" id="times-table">
+          <thead>
+            <tr id="times-table-head-row">
+              <th class="col-date">Date</th>
+              <th>Times</th>
+              <th class="col-total">Hours</th>
+            </tr>
+          </thead>
+          <tbody id="times-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="view-settings" class="view">
+      <div class="panel" id="sync-card">
+        <h3>Sync with GitHub</h3>
+        <div id="sync-settings">
+          <div class="mode-toggle data-profile-toggle" role="tablist" aria-label="Data profile">
+            <button type="button" class="mode-btn active" data-profile="real" id="data-profile-real">Real</button>
+            <button type="button" class="mode-btn" data-profile="test" id="data-profile-test">Test</button>
+          </div>
+          <p class="field-hint">Real is your actual work times. Test is a sandbox for trying the app.</p>
+          <p class="field-hint" id="sync-data-path">File: data/times-data.json</p>
+
+          <label class="field">
+            <span>GitHub token</span>
+            <textarea id="sync-token" class="token-input" rows="2" placeholder="Paste token here" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+          </label>
+          <div class="field-row">
+            <label class="field">
+              <span>Owner</span>
+              <input type="text" id="sync-owner" value="d-mccarter" autocapitalize="off" autocorrect="off">
+            </label>
+            <label class="field">
+              <span>Repo</span>
+              <input type="text" id="sync-repo" value="clockin-logger" autocapitalize="off" autocorrect="off">
+            </label>
+          </div>
+          <div class="sync-auto-row">
+            <span>Auto-sync on changes</span>
+            <button type="button" id="sync-enabled-btn" class="sync-switch off" aria-pressed="false">Off</button>
+          </div>
+          <div class="sync-status" id="sync-status" aria-live="polite">Paste a token, then tap Test token.</div>
+          <div class="sync-actions">
+            <button type="button" class="btn-secondary" id="sync-test-btn">Test token</button>
+            <button type="button" class="btn-secondary" id="sync-pull-btn">Pull from GitHub</button>
+            <button type="button" class="btn-secondary" id="sync-push-btn">Push to GitHub</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Import / Export</h3>
+        <p class="field-hint">Import your LabVIEW <code>times.txt</code>, or export the current profile.</p>
+        <div class="sync-actions">
+          <button type="button" class="btn-secondary" id="import-times-btn">Import file</button>
+          <button type="button" class="btn-secondary" id="export-times-btn">Export times.txt</button>
+          <button type="button" class="btn-secondary" id="export-json-btn">Export JSON</button>
+        </div>
+        <input type="file" id="import-file" accept=".txt,.json,text/plain,application/json" hidden>
+      </div>
+
+      <div class="panel">
+        <h3>How delay works</h3>
+        <p class="field-hint">
+          Delay accounts for walking between the building door and your phone.
+          <strong>FOB In</strong> records now minus delay.
+          <strong>FOB Out</strong> records now plus delay.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button type="button" class="nav-btn active" data-view="clock">
+      <span class="nav-icon" aria-hidden="true">●</span>
+      <span>Clock</span>
+    </button>
+    <button type="button" class="nav-btn" data-view="settings">
+      <span class="nav-icon" aria-hidden="true">☰</span>
+      <span>Settings</span>
+    </button>
+  </nav>
+
+  <div class="modal-backdrop" id="custom-time-modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="custom-time-title">
+      <h3 id="custom-time-title">Add Custom Time</h3>
+      <p class="field-hint">Enter a punch that wasn’t captured with FOB In/Out.</p>
+      <label class="field">
+        <span>Date</span>
+        <input type="date" id="custom-date">
+      </label>
+      <label class="field">
+        <span>Time</span>
+        <input type="time" id="custom-time">
+      </label>
+      <div class="form-actions">
+        <button type="button" class="btn-fob btn-fob-small" id="custom-save-btn">Save</button>
+        <button type="button" class="btn-secondary" id="custom-cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/times-format.js?v=1"></script>
+  <script src="js/github-sync.js?v=1"></script>
+  <script src="js/storage.js?v=1"></script>
+  <script src="js/app.js?v=1"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').then((reg) => reg.update()).catch(() => {});
+    }
+  </script>
+</body>
+</html>
