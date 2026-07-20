@@ -33,7 +33,7 @@
     }
     .app-header h1 { margin: 0; padding: 14px; font-size: 1.25rem; }
   </style>
-  <link rel="stylesheet" href="css/styles.css?v=9">
+  <link rel="stylesheet" href="css/styles.css?v=10">
 </head>
 <body style="background:#d8dde4;color:#1c222c;">
   <header class="app-header">
@@ -91,6 +91,41 @@
             </table>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section id="view-charts" class="view">
+      <div class="panel chart-controls">
+        <label class="field">
+          <span>Range</span>
+          <select id="charts-range">
+            <option value="30">Last 30 days</option>
+            <option value="90" selected>Last 90 days</option>
+            <option value="all">All time</option>
+          </select>
+        </label>
+        <p class="field-hint" id="charts-summary">Add punches to see trends.</p>
+      </div>
+
+      <div class="panel chart-card">
+        <h3>First clock-in</h3>
+        <p class="field-hint">Earliest punch each day</p>
+        <canvas id="chart-first-in" height="200" aria-label="First clock-in over time"></canvas>
+        <p class="empty-state" id="chart-first-in-empty" hidden>Not enough data yet.</p>
+      </div>
+
+      <div class="panel chart-card">
+        <h3>Last clock-out</h3>
+        <p class="field-hint">Latest punch each day</p>
+        <canvas id="chart-last-out" height="200" aria-label="Last clock-out over time"></canvas>
+        <p class="empty-state" id="chart-last-out-empty" hidden>Not enough data yet.</p>
+      </div>
+
+      <div class="panel chart-card">
+        <h3>Hours per day</h3>
+        <p class="field-hint">Total hours worked each day</p>
+        <canvas id="chart-hours" height="200" aria-label="Hours worked per day"></canvas>
+        <p class="empty-state" id="chart-hours-empty" hidden>Not enough data yet.</p>
       </div>
     </section>
 
@@ -159,6 +194,10 @@
       <span class="nav-icon" aria-hidden="true">●</span>
       <span>Clock</span>
     </button>
+    <button type="button" class="nav-btn" data-view="charts">
+      <span class="nav-icon" aria-hidden="true">▤</span>
+      <span>Charts</span>
+    </button>
     <button type="button" class="nav-btn" data-view="settings">
       <span class="nav-icon" aria-hidden="true">☰</span>
       <span>Settings</span>
@@ -184,9 +223,10 @@
     </div>
   </div>
 
-  <script src="js/times-format.js?v=9"></script>
-  <script src="js/github-sync.js?v=9"></script>
-  <script src="js/storage.js?v=9"></script>
-  <script src="js/app.js?v=9"></script>
+  <script src="js/times-format.js?v=10"></script>
+  <script src="js/github-sync.js?v=10"></script>
+  <script src="js/storage.js?v=10"></script>
+  <script src="js/charts.js?v=10"></script>
+  <script src="js/app.js?v=10"></script>
 </body>
 </html>

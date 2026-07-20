@@ -7,6 +7,7 @@ const App = {
       this.bindControls();
       this.bindSync();
       this.bindModals();
+      this.bindCharts();
       this.syncDelayInput();
       this.updateDataProfileUI();
       this.renderTable();
@@ -20,6 +21,9 @@ const App = {
       await ClockerStore.init();
       this.syncDelayInput();
       this.renderTable();
+      if (document.getElementById('view-charts')?.classList.contains('active')) {
+        this.renderCharts();
+      }
     } catch (error) {
       console.error(error);
       this.flashStatus(`Startup error: ${error.message || error}`, 'error');
@@ -36,7 +40,10 @@ const App = {
         });
         const title = document.getElementById('page-title');
         if (title) {
-          title.textContent = view === 'clock' ? 'Clocker' : 'Settings';
+          title.textContent = view === 'clock' ? 'Clocker' : view === 'charts' ? 'Charts' : 'Settings';
+        }
+        if (view === 'charts') {
+          requestAnimationFrame(() => this.renderCharts());
         }
       });
     });
@@ -195,6 +202,53 @@ const App = {
     });
 
     this.updateWeekSummary(days);
+    if (document.getElementById('view-charts')?.classList.contains('active')) {
+      this.renderCharts();
+    }
+  },
+
+  bindCharts() {
+    const range = document.getElementById('charts-range');
+    if (range) {
+      range.addEventListener('change', () => this.renderCharts());
+    }
+    window.addEventListener('resize', () => {
+      if (document.getElementById('view-charts')?.classList.contains('active')) {
+        this.renderCharts();
+      }
+    });
+  },
+
+  renderCharts() {
+    if (typeof Charts === 'undefined') return;
+    const days = ClockerStore.getDays();
+    const range = document.getElementById('charts-range')?.value || '90';
+    const series = Charts.filterSeries(Charts.buildSeries(days), range);
+
+    const summary = document.getElementById('charts-summary');
+    if (summary) {
+      if (!series.length) {
+        summary.textContent = 'Add punches to see trends.';
+      } else {
+        const withHours = series.filter((row) => row.hours > 0);
+        const totalHrs = withHours.reduce((sum, row) => sum + row.hours, 0);
+        const avg = withHours.length ? totalHrs / withHours.length : 0;
+        summary.textContent = `${series.length} day${series.length === 1 ? '' : 's'} · avg ${avg.toFixed(2)}h/day`;
+      }
+    }
+
+    const draw = (canvasId, emptyId, drawer) => {
+      const canvas = document.getElementById(canvasId);
+      const empty = document.getElementById(emptyId);
+      if (!canvas) return;
+      const ok = drawer(canvas, series);
+      canvas.hidden = !ok;
+      if (empty) empty.hidden = ok;
+    };
+
+    draw('chart-first-in', 'chart-first-in-empty', (c, s) => Charts.drawFirstIn(c, s));
+    draw('chart-last-out', 'chart-last-out-empty', (c, s) => Charts.drawLastOut(c, s));
+    draw('chart-hours', 'chart-hours-empty', (c, s) => Charts.drawHours(c, s));
   },
 
   updateWeekSummary(daysNewestFirst) {

@@ -619,11 +619,51 @@ textarea {
   height: calc(var(--nav-height) + var(--safe-bottom));
   padding-bottom: var(--safe-bottom);
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   background: rgba(236, 239, 243, 0.96);
   border-top: 1px solid var(--border);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+}
+
+.chart-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chart-controls .field {
+  margin: 0;
+}
+
+.chart-card h3 {
+  margin: 0 0 2px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.chart-card .field-hint {
+  margin: 0 0 10px;
+}
+
+.chart-card canvas {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: 200px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f4f6f9 0%, #e8ecf1 100%);
+}
+
+.chart-card .empty-state {
+  margin: 12px 0 4px;
+  padding: 28px 12px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  background: linear-gradient(180deg, #f4f6f9 0%, #e8ecf1 100%);
+  border-radius: 8px;
 }
 
 .nav-btn {
