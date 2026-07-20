@@ -43,6 +43,19 @@ const TimesFormat = {
     return `${h}:${String(m).padStart(2, '0')} ${mer}`;
   },
 
+  /** minutes → compact "1:16p" / "11:30a" for dense phone tables */
+  formatTimeCompact(minutes) {
+    if (minutes == null || Number.isNaN(minutes)) return '';
+    let totalMins = Math.round(minutes);
+    totalMins = ((totalMins % 1440) + 1440) % 1440;
+    let h = Math.floor(totalMins / 60);
+    const m = totalMins % 60;
+    const mer = h >= 12 ? 'p' : 'a';
+    h = h % 12;
+    if (h === 0) h = 12;
+    return `${h}:${String(m).padStart(2, '0')}${mer}`;
+  },
+
   /** minutes → "HH:MM" 24h for JSON storage */
   formatTime24(minutes) {
     if (minutes == null || Number.isNaN(minutes)) return null;
