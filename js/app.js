@@ -238,10 +238,12 @@ const App = {
     if (range) {
       range.addEventListener('change', () => this.renderCharts());
     }
+    let resizeTimer = null;
     window.addEventListener('resize', () => {
-      if (document.getElementById('view-charts')?.classList.contains('active')) {
-        this.renderCharts();
-      }
+      if (!document.getElementById('view-charts')?.classList.contains('active')) return;
+      clearTimeout(resizeTimer);
+      // Debounce: iOS Safari fires resize while the native <select> picker is open.
+      resizeTimer = setTimeout(() => this.renderCharts(), 150);
     });
   },
 

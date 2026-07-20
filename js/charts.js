@@ -1,37 +1,87 @@
 /** Canvas charts for Clocker daily stats (no external deps). */
 
 const Charts = {
+  /** Logical CSS height — never re-read canvas.height after DPR scaling. */
+  CHART_HEIGHT: 200,
+
   _setupCanvas(canvas) {
     const dpr = window.devicePixelRatio || 1;
+    const parent = canvas.parentElement;
+    const parentW = parent ? parent.clientWidth : 0;
     const rect = canvas.getBoundingClientRect();
-    const w = Math.max(280, rect.width || canvas.clientWidth || 300);
-    const h = parseInt(canvas.getAttribute('height'), 10) || 200;
+    // Prefer parent width so Safari select/viewport quirks don't inflate size.
+    const w = Math.max(280, parentW || rect.width || canvas.clientWidth || 300);
+    const h = this.CHART_HEIGHT;
+
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
-    canvas.style.width = `${w}px`;
+    // Keep layout size fixed in CSS pixels (do not write bitmap size into the
+    // height attribute path that some engines sync back to getAttribute).
+    canvas.style.width = '100%';
     canvas.style.height = `${h}px`;
+    canvas.removeAttribute('height');
+    canvas.removeAttribute('width');
+
     const ctx = canvas.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     return { ctx, w, h };
-  },
-
-  _drawGrid(ctx, w, h, padding, rows = 4) {
-    ctx.strokeStyle = '#c5ccd6';
-    ctx.lineWidth = 1;
-    const chartH = h - padding.top - padding.bottom;
-    for (let i = 0; i <= rows; i++) {
-      const y = padding.top + (chartH / rows) * i;
-      ctx.beginPath();
-      ctx.moveTo(padding.left, y);
-      ctx.lineTo(w - padding.right, y);
-      ctx.stroke();
-    }
   },
 
   _formatShortDate(isoDate) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
     if (!m) return isoDate;
     return `${parseInt(m[2], 10)}/${parseInt(m[3], 10)}`;
+  },
+
+  /**
+   * Snap a minutes domain to half-hour boundaries and pick tick step
+   * (30, 60, or 120 minutes) so labels stay readable.
+   */
+  _niceTimeScale(dataMin, dataMax) {
+    const half = 30;
+    let lo = Math.floor(dataMin / half) * half;
+    let hi = Math.ceil(dataMax / half) * half;
+    if (lo === hi) {
+      lo -= half;
+      hi += half;
+    }
+    // Breathing room when a point sits on a boundary
+    if (dataMin <= lo) lo -= half;
+    if (dataMax >= hi) hi += half;
+
+    const span = hi - lo;
+    let step = half;
+    if (span / half > 8) step = 60;
+    if (span / step > 8) step = 120;
+
+    lo = Math.floor(lo / step) * step;
+    hi = Math.ceil(hi / step) * step;
+    if (hi <= lo) hi = lo + step * 2;
+
+    const ticks = [];
+    for (let t = lo; t <= hi + 0.001; t += step) ticks.push(t);
+    return { min: lo, max: hi, ticks };
+  },
+
+  /** Nice numeric scale for hours (0-based preferred). */
+  _niceHoursScale(dataMin, dataMax, forceMin) {
+    const min0 = forceMin != null ? forceMin : dataMin;
+    const max0 = Math.max(dataMax, min0 + 0.5);
+    const span = max0 - min0;
+    const candidates = [0.5, 1, 2, 2.5, 5, 10];
+    const rough = span / 4;
+    let step = candidates.find((s) => s >= rough) || Math.ceil(rough);
+
+    let lo = Math.floor(min0 / step) * step;
+    let hi = Math.ceil(max0 / step) * step;
+    if (forceMin != null) lo = forceMin;
+    if (hi <= lo) hi = lo + step * 2;
+
+    const ticks = [];
+    for (let t = lo; t <= hi + 1e-9; t += step) {
+      ticks.push(Math.round(t * 1000) / 1000);
+    }
+    return { min: lo, max: hi, ticks };
   },
 
   /**
@@ -71,40 +121,54 @@ const Charts = {
 
   _drawLineChart(canvas, points, options) {
     const { ctx, w, h } = this._setupCanvas(canvas);
-    const padding = { top: 14, right: 12, bottom: 28, left: 44 };
+    const padding = { top: 14, right: 12, bottom: 28, left: 48 };
     ctx.clearRect(0, 0, w, h);
 
     const usable = points.filter((p) => p.value != null && !Number.isNaN(p.value));
     if (!usable.length) return false;
 
     const values = usable.map((p) => p.value);
-    let minV = options.min ?? Math.min(...values);
-    let maxV = options.max ?? Math.max(...values);
-    if (options.padRange) {
-      const span = maxV - minV || 1;
-      minV -= span * 0.08;
-      maxV += span * 0.08;
+    const dataMin = Math.min(...values);
+    const dataMax = Math.max(...values);
+
+    let scale;
+    if (options.scale === 'time') {
+      scale = this._niceTimeScale(dataMin, dataMax);
+    } else if (options.scale === 'hours') {
+      scale = this._niceHoursScale(dataMin, dataMax, options.min);
+    } else {
+      let minV = options.min ?? dataMin;
+      let maxV = options.max ?? dataMax;
+      if (minV === maxV) {
+        minV -= 1;
+        maxV += 1;
+      }
+      scale = { min: minV, max: maxV, ticks: [maxV, (minV + maxV) / 2, minV] };
     }
-    if (minV === maxV) {
-      minV -= 1;
-      maxV += 1;
-    }
-    const range = maxV - minV;
+
+    const minV = scale.min;
+    const maxV = scale.max;
+    const range = maxV - minV || 1;
+    const ticks = scale.ticks;
 
     const chartW = w - padding.left - padding.right;
     const chartH = h - padding.top - padding.bottom;
 
-    this._drawGrid(ctx, w, h, padding);
-
+    // Grid + Y labels at nice tick values
+    ctx.strokeStyle = '#c5ccd6';
+    ctx.lineWidth = 1;
     ctx.fillStyle = '#5a6575';
     ctx.font = '600 10px "IBM Plex Sans", "Avenir Next", sans-serif';
     ctx.textAlign = 'right';
-    for (let i = 0; i <= 4; i++) {
-      const val = maxV - (range / 4) * i;
-      const y = padding.top + (chartH / 4) * i;
-      const label = options.formatY ? options.formatY(val) : String(Math.round(val));
+    ticks.forEach((val) => {
+      const y = padding.top + chartH - ((val - minV) / range) * chartH;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, y);
+      ctx.lineTo(w - padding.right, y);
+      ctx.stroke();
+      const label = options.formatY ? options.formatY(val) : String(val);
       ctx.fillText(label, padding.left - 6, y + 3);
-    }
+    });
 
     const coords = usable.map((p, i) => ({
       x: padding.left + (usable.length === 1 ? chartW / 2 : (i / (usable.length - 1)) * chartW),
@@ -112,7 +176,6 @@ const Charts = {
       point: p
     }));
 
-    // Soft fill under line
     if (coords.length > 1 && options.fill) {
       ctx.beginPath();
       ctx.moveTo(coords[0].x, padding.top + chartH);
@@ -143,7 +206,6 @@ const Charts = {
       ctx.fill();
     });
 
-    // X labels: first, mid, last
     ctx.fillStyle = '#5a6575';
     ctx.font = '600 10px "IBM Plex Sans", "Avenir Next", sans-serif';
     ctx.textAlign = 'center';
@@ -167,7 +229,7 @@ const Charts = {
     return this._drawLineChart(canvas, points, {
       color: '#2f6fed',
       fill: 'rgba(47, 111, 237, 0.12)',
-      padRange: true,
+      scale: 'time',
       formatY: (v) => TimesFormat.formatTimeCompact(v)
     });
   },
@@ -179,7 +241,7 @@ const Charts = {
     return this._drawLineChart(canvas, points, {
       color: '#c45c1a',
       fill: 'rgba(232, 122, 46, 0.14)',
-      padRange: true,
+      scale: 'time',
       formatY: (v) => TimesFormat.formatTimeCompact(v)
     });
   },
@@ -191,9 +253,9 @@ const Charts = {
     return this._drawLineChart(canvas, points, {
       color: '#1f7a45',
       fill: 'rgba(31, 122, 69, 0.12)',
+      scale: 'hours',
       min: 0,
-      padRange: false,
-      formatY: (v) => v.toFixed(1)
+      formatY: (v) => (Number.isInteger(v) ? String(v) : v.toFixed(1))
     });
   }
 };
