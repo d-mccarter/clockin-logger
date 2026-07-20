@@ -2,7 +2,9 @@
 
 Mobile-friendly web app for tracking work clock-in / clock-out times — a Safari-friendly remake of the LabVIEW **Clocker** tool.
 
-Works on iPhone: open in Safari, then **Share → Add to Home Screen** for a full-screen app with local storage and optional GitHub sync.
+**Live on iPhone:** [https://d-mccarter.github.io/clockin-logger/](https://d-mccarter.github.io/clockin-logger/)
+
+Open that URL in Safari, then **Share → Add to Home Screen** for a full-screen app with local storage and optional GitHub sync.
 
 ## Features
 
