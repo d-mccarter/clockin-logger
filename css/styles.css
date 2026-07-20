@@ -248,8 +248,9 @@ body {
 
 .table-shell {
   position: relative;
-  overflow-y: auto;
-  overflow-x: hidden;
+  /* Single scrollport so Times + Hrs headers can both stick on vertical scroll.
+     (A nested overflow-x on .times-scroll was trapping sticky and letting only Hrs freeze.) */
+  overflow: auto;
   border: 1px solid var(--border-strong);
   border-radius: 12px;
   background: var(--surface-2);
@@ -261,33 +262,28 @@ body {
 
 .table-pane {
   position: relative;
-  width: 100%;
-  max-width: 100%;
+  display: flex;
+  align-items: flex-start;
+  min-width: 100%;
+  width: max-content;
   min-height: 100%;
 }
 
 .times-scroll {
-  width: calc(100% - var(--hours-rail-width));
-  max-width: calc(100% - var(--hours-rail-width));
-  overflow-x: auto;
-  overflow-y: visible;
-  -webkit-overflow-scrolling: touch;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: visible;
 }
 
 .hours-rail {
-  position: absolute;
-  top: 0;
+  position: sticky;
   right: 0;
+  flex: 0 0 var(--hours-rail-width);
   width: var(--hours-rail-width);
   z-index: 4;
   background: #eef1f5;
   border-left: 1px solid var(--border-strong);
   box-shadow: -6px 0 10px rgba(28, 34, 44, 0.1);
-  pointer-events: none; /* let vertical scroll happen on shell; cells don't need click */
-}
-
-.hours-rail .col-total {
-  pointer-events: auto;
 }
 
 .times-table,
@@ -346,6 +342,7 @@ body {
 
 .times-table th.col-date {
   z-index: 3;
+  left: 0;
   background: #b7d0e8;
 }
 
