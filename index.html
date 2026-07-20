@@ -7,11 +7,33 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="theme-color" content="#e87a2e">
   <title>Clocker</title>
+  <!-- Kill any stuck service worker before anything else runs. -->
+  <script>
+    (function () {
+      if (!('serviceWorker' in navigator)) return;
+      navigator.serviceWorker.getRegistrations().then(function (regs) {
+        regs.forEach(function (reg) { reg.unregister(); });
+      });
+      if (window.caches && caches.keys) {
+        caches.keys().then(function (keys) {
+          keys.forEach(function (key) { caches.delete(key); });
+        });
+      }
+    })();
+  </script>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="css/styles.css?v=4">
+  <!-- Inline critical paint so Safari is never a black void if CSS is delayed. -->
+  <style>
+    html, body { margin: 0; background: #d8dde4; color: #1c222c; font-family: "Avenir Next", "Segoe UI", sans-serif; }
+    .boot-banner { display: none; padding: 12px 14px; background: #ffe0a8; color: #1a1208; font-size: 14px; }
+  </style>
+  <link rel="stylesheet" href="css/styles.css?v=5">
 </head>
-<body>
+<body style="background:#d8dde4;">
+  <p class="boot-banner" id="boot-banner">
+    If this page was stuck before: Safari → <b>aA</b> or Settings → clear Website Data for <code>d-mccarter.github.io</code>, then reopen.
+  </p>
   <header class="app-header">
     <h1 id="page-title">Clocker</h1>
     <span class="profile-badge" id="profile-badge" hidden>Test data</span>
@@ -147,17 +169,9 @@
     </div>
   </div>
 
-  <script src="js/times-format.js?v=4"></script>
-  <script src="js/github-sync.js?v=4"></script>
-  <script src="js/storage.js?v=4"></script>
-  <script src="js/app.js?v=4"></script>
-  <script>
-    // Register after load so SW install never blocks first paint on Safari.
-    window.addEventListener('load', () => {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
-      }
-    });
-  </script>
+  <script src="js/times-format.js?v=5"></script>
+  <script src="js/github-sync.js?v=5"></script>
+  <script src="js/storage.js?v=5"></script>
+  <script src="js/app.js?v=5"></script>
 </body>
 </html>
