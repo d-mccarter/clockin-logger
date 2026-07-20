@@ -120,6 +120,7 @@ const App = {
 
   renderTable() {
     const tbody = document.getElementById('times-table-body');
+    const hoursBody = document.getElementById('hours-table-body');
     const theadRow = document.getElementById('times-table-head-row');
     const days = ClockerStore.getDays().slice().reverse(); // newest first for phone use
 
@@ -133,24 +134,30 @@ const App = {
 
     for (let i = 0; i < maxTimes; i++) {
       const th = document.createElement('th');
+      th.className = 'col-time';
       th.textContent = i === 0 ? 'Times' : '';
       theadRow.appendChild(th);
     }
 
-    const totalTh = document.createElement('th');
-    totalTh.className = 'col-total';
-    totalTh.textContent = 'Hours';
-    theadRow.appendChild(totalTh);
-
     tbody.innerHTML = '';
+    hoursBody.innerHTML = '';
+
     if (!days.length) {
       const tr = document.createElement('tr');
       const td = document.createElement('td');
-      td.colSpan = maxTimes + 2;
+      td.colSpan = maxTimes + 1;
       td.className = 'empty-row';
       td.textContent = 'No times yet — tap FOB In Now to start.';
       tr.appendChild(td);
       tbody.appendChild(tr);
+
+      const hTr = document.createElement('tr');
+      const hTd = document.createElement('td');
+      hTd.className = 'col-total';
+      hTd.textContent = '—';
+      hTr.appendChild(hTd);
+      hoursBody.appendChild(hTr);
+
       this.updateWeekSummary([]);
       return;
     }
@@ -172,17 +179,19 @@ const App = {
           const key = `${day.date}|${i}`;
           td.className = 'punch-cell' + (this.selected.has(key) ? ' selected' : '');
           td.dataset.punch = key;
-          td.textContent = TimesFormat.formatTime12(TimesFormat.parseTimeToken(t));
-          td.title = 'Tap to select';
+          td.textContent = TimesFormat.formatTimeCompact(TimesFormat.parseTimeToken(t));
+          td.title = TimesFormat.formatTime12(TimesFormat.parseTimeToken(t));
         }
         tr.appendChild(td);
       }
-
-      const totalTd = document.createElement('td');
-      totalTd.className = 'col-total';
-      totalTd.textContent = TimesFormat.dayTotalHours(day).toFixed(2);
-      tr.appendChild(totalTd);
       tbody.appendChild(tr);
+
+      const hTr = document.createElement('tr');
+      const hTd = document.createElement('td');
+      hTd.className = 'col-total';
+      hTd.textContent = TimesFormat.dayTotalHours(day).toFixed(2);
+      hTr.appendChild(hTd);
+      hoursBody.appendChild(hTr);
     });
 
     this.updateWeekSummary(days);

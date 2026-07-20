@@ -33,7 +33,7 @@
     }
     .app-header h1 { margin: 0; padding: 14px; font-size: 1.25rem; }
   </style>
-  <link rel="stylesheet" href="css/styles.css?v=7">
+  <link rel="stylesheet" href="css/styles.css?v=8">
 </head>
 <body style="background:#d8dde4;color:#1c222c;">
   <header class="app-header">
@@ -67,17 +67,30 @@
       <p class="clock-status" id="clock-status" aria-live="polite">Loading times…</p>
       <p class="week-summary" id="week-summary"></p>
 
-      <div class="table-wrap">
-        <table class="times-table" id="times-table">
-          <thead>
-            <tr id="times-table-head-row">
-              <th class="col-date">Date</th>
-              <th>Times</th>
-              <th class="col-total">Hours</th>
-            </tr>
-          </thead>
-          <tbody id="times-table-body"></tbody>
-        </table>
+      <div class="table-shell" id="table-shell">
+        <div class="table-pane">
+          <div class="times-scroll" id="times-scroll">
+            <table class="times-table" id="times-table">
+              <thead>
+                <tr id="times-table-head-row">
+                  <th class="col-date">Date</th>
+                  <th>Times</th>
+                </tr>
+              </thead>
+              <tbody id="times-table-body"></tbody>
+            </table>
+          </div>
+          <div class="hours-rail" id="hours-rail">
+            <table class="hours-table" id="hours-table">
+              <thead>
+                <tr>
+                  <th class="col-total">Hrs</th>
+                </tr>
+              </thead>
+              <tbody id="hours-table-body"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -171,9 +184,9 @@
     </div>
   </div>
 
-  <script src="js/times-format.js?v=7"></script>
-  <script src="js/github-sync.js?v=7"></script>
-  <script src="js/storage.js?v=7"></script>
-  <script src="js/app.js?v=7"></script>
+  <script src="js/times-format.js?v=8"></script>
+  <script src="js/github-sync.js?v=8"></script>
+  <script src="js/storage.js?v=8"></script>
+  <script src="js/app.js?v=8"></script>
 </body>
 </html>
