@@ -295,6 +295,7 @@ body {
 }
 
 .table-shell {
+  position: relative;
   overflow-y: auto;
   overflow-x: hidden;
   border: 1px solid var(--border-strong);
@@ -303,29 +304,38 @@ body {
   max-height: min(52dvh, 480px);
   -webkit-overflow-scrolling: touch;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --hours-rail-width: 3.35rem;
 }
 
 .table-pane {
-  display: flex;
-  align-items: flex-start;
+  position: relative;
+  width: 100%;
+  max-width: 100%;
   min-height: 100%;
 }
 
 .times-scroll {
-  flex: 1 1 auto;
-  min-width: 0;
+  width: calc(100% - var(--hours-rail-width));
+  max-width: calc(100% - var(--hours-rail-width));
   overflow-x: auto;
+  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
 }
 
 .hours-rail {
-  flex: 0 0 auto;
-  position: sticky;
+  position: absolute;
+  top: 0;
   right: 0;
+  width: var(--hours-rail-width);
   z-index: 4;
   background: #eef1f5;
   border-left: 1px solid var(--border-strong);
-  box-shadow: -6px 0 10px rgba(28, 34, 44, 0.08);
+  box-shadow: -6px 0 10px rgba(28, 34, 44, 0.1);
+  pointer-events: none; /* let vertical scroll happen on shell; cells don't need click */
+}
+
+.hours-rail .col-total {
+  pointer-events: auto;
 }
 
 .times-table,
@@ -340,7 +350,7 @@ body {
 }
 
 .hours-table {
-  width: 3.1rem;
+  width: 100%;
 }
 
 .times-table th,
@@ -402,9 +412,7 @@ body {
   font-family: var(--mono);
   font-weight: 600;
   background: #eef1f5;
-  width: 3.1rem;
-  min-width: 3.1rem;
-  max-width: 3.1rem;
+  width: 100%;
   padding-left: 3px;
   padding-right: 3px;
 }
