@@ -675,21 +675,61 @@ textarea {
   margin-bottom: 6px;
 }
 
-/* iOS Safari date/time inputs have a large intrinsic min-width and otherwise
-   spill past the modal edge. */
+/* iOS Safari date/time inputs: large intrinsic width + nested native chrome.
+   Border lives on .field-control; the input itself is appearance-stripped. */
 .modal-card .field {
   width: 100%;
   max-width: 100%;
   min-width: 0;
 }
 
-.modal-card input[type="date"],
-.modal-card input[type="time"] {
+.modal-card .field-control {
   display: block;
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.modal-card .field-control input[type="date"],
+.modal-card .field-control input[type="time"] {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-appearance: none;
+  appearance: none;
+  color: var(--text);
+  font-size: 1rem;
+  font-family: inherit;
+  line-height: 1.25;
   box-sizing: border-box;
+}
+
+.modal-card .field-control input[type="date"]::-webkit-date-and-time-value,
+.modal-card .field-control input[type="time"]::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+  padding: 0;
+  min-height: 1.25em;
+  height: auto;
+}
+
+.modal-card .field-control input[type="date"]::-webkit-datetime-edit,
+.modal-card .field-control input[type="time"]::-webkit-datetime-edit {
+  padding: 0;
+  margin: 0;
+  min-width: 0;
 }
 
 .form-actions {
