@@ -54,6 +54,7 @@ const ClockerStore = {
     clearTimeout(this._pushTimer);
     this._pushTimer = null;
     this._pushInFlight = null;
+    this._pushQueued = false;
     this._fileSha = null;
 
     localStorage.setItem(PROFILE_KEY, profile.id);
