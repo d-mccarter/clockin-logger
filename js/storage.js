@@ -20,6 +20,7 @@ const ClockerStore = {
   _fileSha: null,
   _pushTimer: null,
   _pushInFlight: null,
+  _pushQueued: false,
   /** Debounce before auto-push after a local change (ms). */
   AUTO_PUSH_DELAY_MS: 1500,
   onSyncStatus: null,
@@ -187,17 +188,32 @@ const ClockerStore = {
     clearTimeout(this._pushTimer);
     this._pushTimer = null;
 
+    // If a push is already running, mark dirty so we push again afterward
+    // with the latest local edits (including deletions).
     if (this._pushInFlight) {
+      this._pushQueued = true;
       return this._pushInFlight;
     }
 
-    this._pushInFlight = this._pushWithRetry(settings, silent).finally(() => {
-      this._pushInFlight = null;
-    });
+    this._pushInFlight = this._pushWithRetry(settings, silent)
+      .finally(() => {
+        this._pushInFlight = null;
+        if (this._pushQueued) {
+          this._pushQueued = false;
+          if (GitHubSync.isAutoSyncEnabled(settings)) {
+            this.schedulePush();
+          }
+        }
+      });
 
     return this._pushInFlight;
   },
 
+  /**
+   * Push local data as source of truth. On 409/422, re-fetch the latest SHA
+   * and retry the same local payload — do NOT merge remote days back in
+   * (that resurrected deleted rows).
+   */
   async _pushWithRetry(settings, silent) {
     this.setSyncStatus(silent ? 'Syncing…' : 'Saving to GitHub…', 'info');
 
@@ -205,13 +221,16 @@ const ClockerStore = {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const local = this.load();
+        const snapshot = JSON.stringify(local);
         const remote = await GitHubSync.fetchRemote(settings);
-        const data = attempt === 0 ? local : this.mergeData(remote.data, local);
-        if (attempt > 0) {
-          this.save(data, { sync: false });
+        this._fileSha = await GitHubSync.pushRemote(settings, local, remote.sha);
+
+        // Edits during the push (extra deletes, etc.) need another sync.
+        if (JSON.stringify(this.load()) !== snapshot) {
+          this._pushQueued = true;
         }
-        this._fileSha = await GitHubSync.pushRemote(settings, data, remote.sha);
-        const note = attempt > 0 ? ' (resolved sync conflict)' : '';
+
+        const note = attempt > 0 ? ' (retry after conflict)' : '';
         this.setSyncStatus(
           silent ? `Synced to GitHub${note}` : `Saved to GitHub${note}`,
           'success'
@@ -219,30 +238,19 @@ const ClockerStore = {
         return;
       } catch (error) {
         lastError = error;
-        if (!/409|422/.test(String(error.message)) || attempt === 2) {
+        const msg = String(error.message || error);
+        if (!/409|422/.test(msg) || attempt === 2) {
           break;
         }
+        this.setSyncStatus('Sync conflict — retrying with latest file…', 'info');
       }
     }
 
-    this.setSyncStatus(lastError.message, 'error');
+    const friendly = /409|422/.test(String(lastError?.message || ''))
+      ? 'GitHub was updated elsewhere. Tap Push again to save your local copy (deletes included).'
+      : lastError.message;
+    this.setSyncStatus(friendly, 'error');
     throw lastError;
-  },
-
-  mergeData(remote, local) {
-    const remoteNorm = this.normalize(remote);
-    const localNorm = this.normalize(local);
-    const byDate = new Map();
-    [...remoteNorm.days, ...localNorm.days].forEach((day) => {
-      byDate.set(day.date, day);
-    });
-    return {
-      version: 1,
-      settings: {
-        delaySeconds: localNorm.settings.delaySeconds ?? remoteNorm.settings.delaySeconds ?? 60
-      },
-      days: [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date))
-    };
   },
 
   schedulePush() {
