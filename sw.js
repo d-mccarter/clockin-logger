@@ -1,4 +1,4 @@
-const CACHE = 'clocker-v2';
+const CACHE = 'clocker-v3';
 const ASSETS = [
   './',
   './index.html',
