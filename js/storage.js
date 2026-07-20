@@ -16,7 +16,7 @@ const DATA_PROFILES = {
   }
 };
 
-const Storage = {
+const ClockerStore = {
   _fileSha: null,
   _pushTimer: null,
   _pushInFlight: null,
@@ -316,9 +316,21 @@ const Storage = {
     const existing = this.load();
     if (!this.isEmpty(existing)) return existing;
 
+    const fetchText = async (url) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch(url, { cache: 'no-store', signal: controller.signal });
+        if (!response.ok) return null;
+        return response;
+      } finally {
+        clearTimeout(timer);
+      }
+    };
+
     try {
-      const response = await fetch(`./${profile.path}?v=${Date.now()}`, { cache: 'no-store' });
-      if (response.ok) {
+      const response = await fetchText(`./${profile.path}?v=${Date.now()}`);
+      if (response) {
         const json = await response.json();
         return this.save(json, { sync: false });
       }
@@ -328,8 +340,8 @@ const Storage = {
 
     if (profile.id === 'real') {
       try {
-        const response = await fetch('./data/times.txt', { cache: 'no-store' });
-        if (response.ok) {
+        const response = await fetchText('./data/times.txt');
+        if (response) {
           const text = await response.text();
           return this.save(TimesFormat.parseTimesTxt(text), { sync: false });
         }

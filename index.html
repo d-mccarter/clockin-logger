@@ -7,33 +7,35 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="theme-color" content="#e87a2e">
   <title>Clocker</title>
-  <!-- Kill any stuck service worker before anything else runs. -->
   <script>
+    // Clear any previously installed service worker. Do NOT reload here —
+    // a reload loop was freezing Firefox/Safari.
     (function () {
       if (!('serviceWorker' in navigator)) return;
       navigator.serviceWorker.getRegistrations().then(function (regs) {
         regs.forEach(function (reg) { reg.unregister(); });
-      });
+      }).catch(function () {});
       if (window.caches && caches.keys) {
         caches.keys().then(function (keys) {
           keys.forEach(function (key) { caches.delete(key); });
-        });
+        }).catch(function () {});
       }
     })();
   </script>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <!-- Inline critical paint so Safari is never a black void if CSS is delayed. -->
   <style>
-    html, body { margin: 0; background: #d8dde4; color: #1c222c; font-family: "Avenir Next", "Segoe UI", sans-serif; }
-    .boot-banner { display: none; padding: 12px 14px; background: #ffe0a8; color: #1a1208; font-size: 14px; }
+    html, body {
+      margin: 0;
+      background: #d8dde4;
+      color: #1c222c;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+    }
+    .app-header h1 { margin: 0; padding: 14px; font-size: 1.25rem; }
   </style>
-  <link rel="stylesheet" href="css/styles.css?v=5">
+  <link rel="stylesheet" href="css/styles.css?v=6">
 </head>
-<body style="background:#d8dde4;">
-  <p class="boot-banner" id="boot-banner">
-    If this page was stuck before: Safari → <b>aA</b> or Settings → clear Website Data for <code>d-mccarter.github.io</code>, then reopen.
-  </p>
+<body style="background:#d8dde4;color:#1c222c;">
   <header class="app-header">
     <h1 id="page-title">Clocker</h1>
     <span class="profile-badge" id="profile-badge" hidden>Test data</span>
@@ -62,7 +64,7 @@
         <button type="button" class="btn-action btn-danger" id="delete-selected-btn">Delete Selected</button>
       </div>
 
-      <p class="clock-status" id="clock-status" aria-live="polite"></p>
+      <p class="clock-status" id="clock-status" aria-live="polite">Loading times…</p>
       <p class="week-summary" id="week-summary"></p>
 
       <div class="table-wrap">
@@ -169,9 +171,9 @@
     </div>
   </div>
 
-  <script src="js/times-format.js?v=5"></script>
-  <script src="js/github-sync.js?v=5"></script>
-  <script src="js/storage.js?v=5"></script>
-  <script src="js/app.js?v=5"></script>
+  <script src="js/times-format.js?v=6"></script>
+  <script src="js/github-sync.js?v=6"></script>
+  <script src="js/storage.js?v=6"></script>
+  <script src="js/app.js?v=6"></script>
 </body>
 </html>
