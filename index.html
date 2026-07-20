@@ -11,7 +11,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <script>
     // Shell build must match build.json. Used to bust Safari's sticky HTML cache.
-    window.__CLOCKER_SHELL__ = 13;
+    window.__CLOCKER_SHELL__ = 14;
     (function () {
       // Clear any previously installed service worker. Do NOT reload here —
       // a reload loop was freezing Firefox/Safari.
@@ -74,7 +74,7 @@
     }
     .app-header h1 { margin: 0; padding: 14px; font-size: 1.25rem; }
   </style>
-  <link rel="stylesheet" href="css/styles.css?v=13">
+  <link rel="stylesheet" href="css/styles.css?v=14">
 </head>
 <body style="background:#d8dde4;color:#1c222c;">
   <header class="app-header">
@@ -88,16 +88,6 @@
       <div class="fob-stack">
         <button type="button" class="btn-fob" id="fob-in-btn">FOB In Now</button>
         <button type="button" class="btn-fob" id="fob-out-btn">FOB Out Now</button>
-      </div>
-
-      <div class="delay-panel">
-        <span class="delay-label">Delay Seconds</span>
-        <div class="number-stepper">
-          <button type="button" class="btn-step" id="delay-down" aria-label="Decrease delay">−</button>
-          <input type="number" id="delay-seconds" value="60" step="5" aria-label="Delay seconds">
-          <button type="button" class="btn-step" id="delay-up" aria-label="Increase delay">+</button>
-        </div>
-        <p class="field-hint">In subtracts delay (door → desk). Out adds delay (desk → door).</p>
       </div>
 
       <div class="action-row">
@@ -199,6 +189,10 @@
             <span>Auto-sync on changes</span>
             <button type="button" id="sync-enabled-btn" class="sync-switch off" aria-pressed="false">Off</button>
           </div>
+          <p class="field-hint">
+            When on, Clocker syncs when you open the app, then pushes about
+            <strong>1.5 seconds</strong> after each change (not on a timer).
+          </p>
           <div class="sync-status" id="sync-status" aria-live="polite">Paste a token, then tap Test token.</div>
           <div class="sync-actions">
             <button type="button" class="btn-secondary" id="sync-test-btn">Test token</button>
@@ -217,15 +211,6 @@
           <button type="button" class="btn-secondary" id="export-json-btn">Export JSON</button>
         </div>
         <input type="file" id="import-file" accept=".txt,.json,text/plain,application/json" hidden>
-      </div>
-
-      <div class="panel">
-        <h3>How delay works</h3>
-        <p class="field-hint">
-          Delay accounts for walking between the building door and your phone.
-          <strong>FOB In</strong> records now minus delay.
-          <strong>FOB Out</strong> records now plus delay.
-        </p>
       </div>
     </section>
   </main>
@@ -264,10 +249,10 @@
     </div>
   </div>
 
-  <script src="js/times-format.js?v=13"></script>
-  <script src="js/github-sync.js?v=13"></script>
-  <script src="js/storage.js?v=13"></script>
-  <script src="js/charts.js?v=13"></script>
-  <script src="js/app.js?v=13"></script>
+  <script src="js/times-format.js?v=14"></script>
+  <script src="js/github-sync.js?v=14"></script>
+  <script src="js/storage.js?v=14"></script>
+  <script src="js/charts.js?v=14"></script>
+  <script src="js/app.js?v=14"></script>
 </body>
 </html>

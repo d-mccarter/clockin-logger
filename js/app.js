@@ -9,18 +9,15 @@ const App = {
       this.bindSync();
       this.bindModals();
       this.bindCharts();
-      this.syncDelayInput();
       this.updateDataProfileUI();
       this.renderTable();
       this.loadBuildLabel();
 
       await ClockerStore.seedFromBundledFiles();
-      this.syncDelayInput();
       this.renderTable();
       this.flashStatus('');
 
       await ClockerStore.init();
-      this.syncDelayInput();
       this.renderTable();
       if (document.getElementById('view-charts')?.classList.contains('active')) {
         this.renderCharts();
@@ -75,33 +72,12 @@ const App = {
     });
   },
 
-  syncDelayInput() {
-    const input = document.getElementById('delay-seconds');
-    if (input) input.value = ClockerStore.getDelaySeconds();
-  },
-
   bindControls() {
     document.getElementById('fob-in-btn').addEventListener('click', () => {
       this.addFobPunch('in');
     });
     document.getElementById('fob-out-btn').addEventListener('click', () => {
       this.addFobPunch('out');
-    });
-
-    const delayInput = document.getElementById('delay-seconds');
-    const commitDelay = () => {
-      ClockerStore.setDelaySeconds(delayInput.value);
-      this.syncDelayInput();
-      this.flashStatus(`Delay set to ${ClockerStore.getDelaySeconds()}s`);
-    };
-    delayInput.addEventListener('change', commitDelay);
-    document.getElementById('delay-down').addEventListener('click', () => {
-      delayInput.value = String((parseInt(delayInput.value, 10) || 0) - 5);
-      commitDelay();
-    });
-    document.getElementById('delay-up').addEventListener('click', () => {
-      delayInput.value = String((parseInt(delayInput.value, 10) || 0) + 5);
-      commitDelay();
     });
 
     document.getElementById('add-custom-btn').addEventListener('click', () => {
@@ -122,16 +98,15 @@ const App = {
   },
 
   addFobPunch(direction) {
-    const delay = ClockerStore.getDelaySeconds();
-    const adjusted = TimesFormat.applyDelay(new Date(), delay, direction);
-    const isoDate = TimesFormat.dateToIsoDay(adjusted);
-    const time24 = TimesFormat.dateToTime24(adjusted);
+    const now = new Date();
+    const isoDate = TimesFormat.dateToIsoDay(now);
+    const time24 = TimesFormat.dateToTime24(now);
     ClockerStore.upsertPunch(isoDate, time24);
     this.selected.clear();
     this.renderTable();
     const label = direction === 'in' ? 'FOB In' : 'FOB Out';
     this.flashStatus(
-      `${label}: ${TimesFormat.formatDateMDY(isoDate)} ${TimesFormat.formatTime12(TimesFormat.parseTimeToken(time24))} (${delay >= 0 ? (direction === 'in' ? '−' : '+') : ''}${Math.abs(delay)}s)`
+      `${label}: ${TimesFormat.formatDateMDY(isoDate)} ${TimesFormat.formatTime12(TimesFormat.parseTimeToken(time24))}`
     );
   },
 
@@ -354,7 +329,6 @@ const App = {
           return;
         }
         ClockerStore.replaceAll(data);
-        this.syncDelayInput();
         this.renderTable();
         this.flashStatus(`Imported ${data.days.length} day(s)`);
       } catch (err) {
@@ -458,7 +432,6 @@ const App = {
     };
 
     const refreshAfterSync = () => {
-      this.syncDelayInput();
       this.renderTable();
     };
 
