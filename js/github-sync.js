@@ -61,13 +61,25 @@ const GitHubSync = {
       ? `Bearer ${token}`
       : `token ${token}`;
 
+    // Only headers GitHub allows in CORS preflight. Do NOT send Cache-Control /
+    // Pragma — Safari/Firefox treat that as NetworkError / "Load failed".
     return {
       Accept: 'application/vnd.github+json',
       Authorization: auth,
-      'X-GitHub-Api-Version': '2022-11-28',
-      'Cache-Control': 'no-cache',
-      Pragma: 'no-cache'
+      'X-GitHub-Api-Version': '2022-11-28'
     };
+  },
+
+  /** Turn opaque browser fetch failures into an actionable message. */
+  networkErrorMessage(error, fallback = 'Could not reach GitHub') {
+    const msg = String(error?.message || error || '');
+    if (/abort/i.test(msg)) {
+      return 'GitHub request timed out — check your connection and try again.';
+    }
+    if (/load failed|networkerror|failed to fetch|network request failed/i.test(msg)) {
+      return 'Could not reach GitHub (network/CORS). Check connection and try Test token.';
+    }
+    return msg || fallback;
   },
 
   validateToken(settings) {
@@ -85,9 +97,15 @@ const GitHubSync = {
 
   async testToken(settings) {
     this.validateToken(settings);
-    const response = await fetch('https://api.github.com/user', {
-      headers: this.headers(settings)
-    });
+    let response;
+    try {
+      response = await fetch('https://api.github.com/user', {
+        headers: this.headers(settings),
+        cache: 'no-store'
+      });
+    } catch (error) {
+      throw new Error(this.networkErrorMessage(error));
+    }
 
     if (response.status === 401) {
       throw new Error(await this.parseError(response, 'GitHub token rejected'));
@@ -133,6 +151,8 @@ const GitHubSync = {
         cache: 'no-store',
         signal: controller.signal
       });
+    } catch (error) {
+      throw new Error(this.networkErrorMessage(error));
     } finally {
       clearTimeout(timer);
     }
@@ -182,15 +202,20 @@ const GitHubSync = {
     };
     if (sha) body.sha = sha;
 
-    const response = await fetch(this.writeApiUrl(settings), {
-      method: 'PUT',
-      cache: 'no-store',
-      headers: {
-        ...this.headers(settings),
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
+    let response;
+    try {
+      response = await fetch(this.writeApiUrl(settings), {
+        method: 'PUT',
+        cache: 'no-store',
+        headers: {
+          ...this.headers(settings),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+    } catch (error) {
+      throw new Error(this.networkErrorMessage(error));
+    }
 
     if (response.status === 401) {
       throw new Error(await this.parseError(response, 'GitHub token rejected'));
