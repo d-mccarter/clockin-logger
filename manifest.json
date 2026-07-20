@@ -2,7 +2,7 @@
   "name": "Clocker",
   "short_name": "Clocker",
   "description": "Track work clock-in and clock-out times",
-  "start_url": "./?_shell=13",
+  "start_url": "./?_shell=15",
   "display": "standalone",
   "background_color": "#d8dde4",
   "theme_color": "#e87a2e",
