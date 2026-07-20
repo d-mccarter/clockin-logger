@@ -1,5 +1,6 @@
 const PROFILE_KEY = 'clocker-profile';
 const DELAY_KEY = 'clocker-delay-seconds';
+const PUSH_LOCK_KEY = 'clocker-push-lock';
 
 const DATA_PROFILES = {
   real: {
@@ -198,6 +199,7 @@ const ClockerStore = {
 
     this._pushInFlight = this._pushWithRetry(settings, silent)
       .finally(() => {
+        this._releasePushLock();
         this._pushInFlight = null;
         if (this._pushQueued) {
           this._pushQueued = false;
@@ -210,24 +212,78 @@ const ClockerStore = {
     return this._pushInFlight;
   },
 
+  _tabId() {
+    if (!this._tabIdValue) {
+      this._tabIdValue = `tab-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+    return this._tabIdValue;
+  },
+
+  _acquirePushLock() {
+    try {
+      const now = Date.now();
+      const raw = localStorage.getItem(PUSH_LOCK_KEY);
+      if (raw) {
+        const lock = JSON.parse(raw);
+        if (lock?.id && lock.id !== this._tabId() && now - (lock.at || 0) < 15000) {
+          return false;
+        }
+      }
+      localStorage.setItem(PUSH_LOCK_KEY, JSON.stringify({ id: this._tabId(), at: now }));
+      return true;
+    } catch {
+      return true;
+    }
+  },
+
+  _releasePushLock() {
+    try {
+      const raw = localStorage.getItem(PUSH_LOCK_KEY);
+      if (!raw) return;
+      const lock = JSON.parse(raw);
+      if (lock?.id === this._tabId()) localStorage.removeItem(PUSH_LOCK_KEY);
+    } catch {
+      /* ignore */
+    }
+  },
+
+  _sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  },
+
   /**
    * Push local data as source of truth. On 409/422, re-fetch the latest SHA
-   * and retry the same local payload — do NOT merge remote days back in
-   * (that resurrected deleted rows).
+   * (no-store) and retry the same local payload — do NOT merge remote days
+   * back in (that resurrected deleted rows).
    */
   async _pushWithRetry(settings, silent) {
     this.setSyncStatus(silent ? 'Syncing…' : 'Saving to GitHub…', 'info');
 
     let lastError = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 5; attempt++) {
       try {
-        const local = this.load();
+        if (!this._acquirePushLock()) {
+          // Another tab is pushing — wait and retry.
+          lastError = new Error('Another Clocker tab is syncing — tap Push again in a moment.');
+          await this._sleep(400 + attempt * 300);
+          continue;
+        }
+
+        const local = this.normalize(this.load());
         const snapshot = JSON.stringify(local);
         const remote = await GitHubSync.fetchRemote(settings);
+        const remoteNorm = this.normalize(remote.data);
+
+        // Already matches GitHub — nothing to write (avoids needless conflicts).
+        if (JSON.stringify(local) === JSON.stringify(remoteNorm)) {
+          this._fileSha = remote.sha;
+          this.setSyncStatus(silent ? 'Synced to GitHub' : 'Already up to date on GitHub', 'success');
+          return;
+        }
+
         this._fileSha = await GitHubSync.pushRemote(settings, local, remote.sha);
 
-        // Edits during the push (extra deletes, etc.) need another sync.
-        if (JSON.stringify(this.load()) !== snapshot) {
+        if (JSON.stringify(this.normalize(this.load())) !== snapshot) {
           this._pushQueued = true;
         }
 
@@ -239,16 +295,18 @@ const ClockerStore = {
         return;
       } catch (error) {
         lastError = error;
+        this._releasePushLock();
         const msg = String(error.message || error);
-        if (!/409|422/.test(msg) || attempt === 2) {
+        if (!/409|422/.test(msg) || attempt === 4) {
           break;
         }
         this.setSyncStatus('Sync conflict — retrying with latest file…', 'info');
+        await this._sleep(300 + attempt * 400);
       }
     }
 
     const friendly = /409|422/.test(String(lastError?.message || ''))
-      ? 'GitHub was updated elsewhere. Tap Push again to save your local copy (deletes included).'
+      ? 'GitHub was updated elsewhere (often another phone/tab with Auto-sync). Tap Push again — your local copy wins, including deletes.'
       : lastError.message;
     this.setSyncStatus(friendly, 'error');
     throw lastError;

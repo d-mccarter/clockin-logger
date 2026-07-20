@@ -64,7 +64,9 @@ const GitHubSync = {
     return {
       Accept: 'application/vnd.github+json',
       Authorization: auth,
-      'X-GitHub-Api-Version': '2022-11-28'
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache'
     };
   },
 
@@ -128,6 +130,7 @@ const GitHubSync = {
     try {
       response = await fetch(this.readApiUrl(settings), {
         headers: this.headers(settings),
+        cache: 'no-store',
         signal: controller.signal
       });
     } finally {
@@ -181,6 +184,7 @@ const GitHubSync = {
 
     const response = await fetch(this.writeApiUrl(settings), {
       method: 'PUT',
+      cache: 'no-store',
       headers: {
         ...this.headers(settings),
         'Content-Type': 'application/json'
