@@ -121,7 +121,7 @@ const TimesFormat = {
       },
       days: (Array.isArray(data?.days) ? data.days : [])
         .map((d) => this.normalizeDay(d))
-        .filter((d) => d.date)
+        .filter((d) => d.date && (d.times || []).some((t) => t != null && t !== ''))
         .sort((a, b) => a.date.localeCompare(b.date))
     };
   },
@@ -186,17 +186,30 @@ const TimesFormat = {
     return this.normalize({ version: 1, settings: { delaySeconds: 60 }, days });
   },
 
-  toTimesTxt(data) {
+  toTimesTxt(data, options = {}) {
     const normalized = this.normalize(data);
+    const includeTotal = options.includeTotal === true;
+    // LabVIEW export uses a fixed-width time grid (8 columns) with trailing tabs.
+    const minSlots = options.slots ?? 8;
+    const maxTimes = Math.max(
+      minSlots,
+      ...normalized.days.map((day) => (day.times || []).length),
+      0
+    );
+
     return normalized.days.map((day) => {
       const date = this.formatDateMDY(day.date);
-      const timeCells = (day.times || []).map((t) => {
-        if (t == null || t === '') return '';
-        return this.formatTime12(this.parseTimeToken(t));
-      });
-      const total = this.dayTotalHours(day).toFixed(2);
-      return [date, ...timeCells, total].join('\t');
-    }).join('\n') + (normalized.days.length ? '\n' : '');
+      const timeCells = [];
+      for (let i = 0; i < maxTimes; i++) {
+        const t = day.times[i];
+        timeCells.push(
+          t == null || t === '' ? '' : this.formatTime12(this.parseTimeToken(t))
+        );
+      }
+      const cells = [date, ...timeCells];
+      if (includeTotal) cells.push(this.dayTotalHours(day).toFixed(2));
+      return cells.join('\t');
+    }).join('\r\n') + (normalized.days.length ? '\r\n' : '');
   },
 
   /** Apply delay (seconds) to a Date → adjusted Date */

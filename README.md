@@ -30,6 +30,8 @@ Open `http://localhost:3000` (or your machine’s LAN IP from iPhone Safari on t
 | Real | `clocker-data` | `data/times-data.json` |
 | Test | `clocker-data-test` | `data/times-data-test.json` |
 
+Real punch history is sourced from LabVIEW `times.txt` (also kept at the repo root and as `data/times.txt`).
+
 JSON shape:
 
 ```json
@@ -45,13 +47,14 @@ JSON shape:
 }
 ```
 
-LabVIEW-compatible `data/times.txt` is tab-delimited:
+LabVIEW-compatible `times.txt` is tab-delimited (CRLF), with empty punch cells allowed and no trailing totals column:
 
 ```text
-7/6/2026	8:40 AM	11:39 AM	12:00 PM	5:47 PM	8.77
+7/6/2026	8:40 AM	11:39 AM	12:00 PM	5:47 PM					
+7/14/2026	7:50 AM		12:19 PM	12:22 PM	6:14 PM				
 ```
 
-Empty punch cells are allowed (stored as `null` in JSON). Total hours = paired in/out differences.
+Total hours in the app = paired in/out differences (empty cells are skipped when pairing).
 
 ## GitHub sync (iPhone)
 
