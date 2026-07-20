@@ -10,17 +10,19 @@ const Charts = {
     const parentW = parent ? parent.clientWidth : 0;
     const rect = canvas.getBoundingClientRect();
     // Prefer parent width so Safari select/viewport quirks don't inflate size.
-    const w = Math.max(280, parentW || rect.width || canvas.clientWidth || 300);
+    const w = Math.max(280, Math.round(parentW || rect.width || canvas.clientWidth || 300));
     const h = this.CHART_HEIGHT;
 
+    // CSS layout size in CSS pixels (must match the logical draw size below).
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    canvas.style.maxHeight = `${h}px`;
+
+    // Backing store in device pixels. Do NOT removeAttribute('width'/'height'):
+    // on Safari that resets the bitmap to 300×150 while setTransform(dpr)
+    // still scales drawing — charts look massively zoomed.
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
-    // Keep layout size fixed in CSS pixels (do not write bitmap size into the
-    // height attribute path that some engines sync back to getAttribute).
-    canvas.style.width = '100%';
-    canvas.style.height = `${h}px`;
-    canvas.removeAttribute('height');
-    canvas.removeAttribute('width');
 
     const ctx = canvas.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
