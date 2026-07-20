@@ -7,19 +7,60 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="theme-color" content="#e87a2e">
   <title>Clocker</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
   <script>
-    // Clear any previously installed service worker. Do NOT reload here —
-    // a reload loop was freezing Firefox/Safari.
+    // Shell build must match build.json. Used to bust Safari's sticky HTML cache.
+    window.__CLOCKER_SHELL__ = 11;
     (function () {
-      if (!('serviceWorker' in navigator)) return;
-      navigator.serviceWorker.getRegistrations().then(function (regs) {
-        regs.forEach(function (reg) { reg.unregister(); });
-      }).catch(function () {});
+      // Clear any previously installed service worker. Do NOT reload here —
+      // a reload loop was freezing Firefox/Safari.
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          regs.forEach(function (reg) { reg.unregister(); });
+        }).catch(function () {});
+      }
       if (window.caches && caches.keys) {
         caches.keys().then(function (keys) {
           keys.forEach(function (key) { caches.delete(key); });
         }).catch(function () {});
       }
+
+      function bustShell(reason) {
+        try {
+          var shell = String(window.__CLOCKER_SHELL__ || '');
+          var key = 'clocker_shell_bust_' + shell;
+          if (sessionStorage.getItem(key) === '1') return;
+          sessionStorage.setItem(key, '1');
+          var u = new URL(location.href);
+          u.searchParams.set('_shell', shell);
+          u.searchParams.set('_t', String(Date.now()));
+          console.info('Clocker shell refresh:', reason);
+          location.replace(u.toString());
+        } catch (e) {}
+      }
+
+      function checkChartsDom() {
+        if (!document.querySelector('.nav-btn[data-view="charts"]') ||
+            !document.getElementById('view-charts')) {
+          bustShell('missing-charts-dom');
+        }
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkChartsDom);
+      } else {
+        checkChartsDom();
+      }
+
+      fetch('build.json?t=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          if (!j || j.build == null) return;
+          if (Number(j.build) !== Number(window.__CLOCKER_SHELL__)) {
+            bustShell('build-mismatch');
+          }
+        })
+        .catch(function () {});
     })();
   </script>
   <link rel="manifest" href="manifest.json">
@@ -33,7 +74,7 @@
     }
     .app-header h1 { margin: 0; padding: 14px; font-size: 1.25rem; }
   </style>
-  <link rel="stylesheet" href="css/styles.css?v=10">
+  <link rel="stylesheet" href="css/styles.css?v=11">
 </head>
 <body style="background:#d8dde4;color:#1c222c;">
   <header class="app-header">
@@ -223,10 +264,10 @@
     </div>
   </div>
 
-  <script src="js/times-format.js?v=10"></script>
-  <script src="js/github-sync.js?v=10"></script>
-  <script src="js/storage.js?v=10"></script>
-  <script src="js/charts.js?v=10"></script>
-  <script src="js/app.js?v=10"></script>
+  <script src="js/times-format.js?v=11"></script>
+  <script src="js/github-sync.js?v=11"></script>
+  <script src="js/storage.js?v=11"></script>
+  <script src="js/charts.js?v=11"></script>
+  <script src="js/app.js?v=11"></script>
 </body>
 </html>

@@ -3,6 +3,7 @@ const App = {
 
   async init() {
     try {
+      this.ensureFreshShell();
       this.bindNav();
       this.bindControls();
       this.bindSync();
@@ -27,6 +28,31 @@ const App = {
     } catch (error) {
       console.error(error);
       this.flashStatus(`Startup error: ${error.message || error}`, 'error');
+    }
+  },
+
+  /**
+   * Safari (esp. Home Screen) can keep a stale index.html while still
+   * fetching a fresh build.json — so Build N shows without the Charts tab.
+   * Force a cache-busting navigation when the Charts shell is missing.
+   */
+  ensureFreshShell() {
+    const hasCharts =
+      document.querySelector('.nav-btn[data-view="charts"]') &&
+      document.getElementById('view-charts');
+    if (hasCharts) return;
+
+    try {
+      const shell = String(window.__CLOCKER_SHELL__ || Date.now());
+      const key = `clocker_shell_bust_${shell}`;
+      if (sessionStorage.getItem(key) === '1') return;
+      sessionStorage.setItem(key, '1');
+      const url = new URL(location.href);
+      url.searchParams.set('_shell', shell);
+      url.searchParams.set('_t', String(Date.now()));
+      location.replace(url.toString());
+    } catch {
+      // ignore
     }
   },
 
