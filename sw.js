@@ -1,6 +1,5 @@
-const CACHE = 'clocker-v3';
+const CACHE = 'clocker-v4';
 const ASSETS = [
-  './',
   './index.html',
   './css/styles.css',
   './js/times-format.js',
@@ -8,19 +7,19 @@ const ASSETS = [
   './js/storage.js',
   './js/app.js',
   './manifest.json',
-  './data/times-data.json',
-  './data/times-data-test.json',
-  './data/times.txt',
   './build.json',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];
 
-const NETWORK_FIRST = /\.(?:html|css|js|json|txt)$|\/$/;
-
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(ASSETS))
+    caches.open(CACHE).then(async (cache) => {
+      // Cache individually so one missing file cannot break install.
+      await Promise.all(
+        ASSETS.map((asset) => cache.add(asset).catch(() => undefined))
+      );
+    })
   );
   self.skipWaiting();
 });
@@ -41,27 +40,30 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (NETWORK_FIRST.test(url.pathname) || event.request.mode === 'navigate') {
-    event.respondWith(networkFirst(event.request));
-    return;
-  }
-
-  event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
-  );
+  // Prefer network with a short timeout so Safari never spins forever.
+  event.respondWith(networkFirst(event.request));
 });
 
 async function networkFirst(request) {
   const cache = await caches.open(CACHE);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+
   try {
-    const response = await fetch(new Request(request, { cache: 'no-store' }));
+    const response = await fetch(request, { cache: 'no-store', signal: controller.signal });
+    clearTimeout(timer);
     if (response.ok) {
-      cache.put(request, response.clone());
+      cache.put(request, response.clone()).catch(() => {});
     }
     return response;
   } catch {
+    clearTimeout(timer);
     const cached = await cache.match(request);
     if (cached) return cached;
-    throw new Error('Offline and not cached');
+    if (request.mode === 'navigate') {
+      const fallback = await cache.match('./index.html');
+      if (fallback) return fallback;
+    }
+    return new Response('Offline', { status: 503, statusText: 'Offline' });
   }
 }

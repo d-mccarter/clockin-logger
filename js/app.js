@@ -496,5 +496,12 @@ const App = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  App.init();
+  App.init().catch((error) => {
+    console.error(error);
+    const status = document.getElementById('clock-status');
+    if (status) {
+      status.textContent = `Startup error: ${error.message || error}`;
+      status.dataset.type = 'error';
+    }
+  });
 });
