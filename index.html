@@ -11,7 +11,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <script>
     // Shell build must match build.json. Used to bust Safari's sticky HTML cache.
-    window.__CLOCKER_SHELL__ = 20;
+    window.__CLOCKER_SHELL__ = 21;
     (function () {
       // Clear any previously installed service worker. Do NOT reload here —
       // a reload loop was freezing Firefox/Safari.
@@ -74,7 +74,7 @@
     }
     .app-header h1 { margin: 0; padding: 14px; font-size: 1.25rem; }
   </style>
-  <link rel="stylesheet" href="css/styles.css?v=20">
+  <link rel="stylesheet" href="css/styles.css?v=21">
 </head>
 <body style="background:#d8dde4;color:#1c222c;">
   <header class="app-header">
@@ -99,29 +99,14 @@
       <p class="week-summary" id="week-summary"></p>
 
       <div class="table-shell" id="table-shell">
-        <div class="table-pane">
-          <div class="times-scroll" id="times-scroll">
-            <table class="times-table" id="times-table">
-              <thead>
-                <tr id="times-table-head-row">
-                  <th class="col-date">Date</th>
-                  <th>Times</th>
-                </tr>
-              </thead>
-              <tbody id="times-table-body"></tbody>
-            </table>
-          </div>
-          <div class="hours-rail" id="hours-rail">
-            <table class="hours-table" id="hours-table">
-              <thead>
-                <tr>
-                  <th class="col-total">Hrs</th>
-                </tr>
-              </thead>
-              <tbody id="hours-table-body"></tbody>
-            </table>
-          </div>
-        </div>
+        <table class="times-table" id="times-table">
+          <thead>
+            <tr id="times-table-head-row">
+              <th class="col-label"></th>
+            </tr>
+          </thead>
+          <tbody id="times-table-body"></tbody>
+        </table>
       </div>
     </section>
 
@@ -254,10 +239,10 @@
     </div>
   </div>
 
-  <script src="js/times-format.js?v=20"></script>
-  <script src="js/github-sync.js?v=20"></script>
-  <script src="js/storage.js?v=20"></script>
-  <script src="js/charts.js?v=20"></script>
-  <script src="js/app.js?v=20"></script>
+  <script src="js/times-format.js?v=21"></script>
+  <script src="js/github-sync.js?v=21"></script>
+  <script src="js/storage.js?v=21"></script>
+  <script src="js/charts.js?v=21"></script>
+  <script src="js/app.js?v=21"></script>
 </body>
 </html>

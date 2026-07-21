@@ -87,6 +87,17 @@ const TimesFormat = {
     return `${parseInt(m[2], 10)}/${parseInt(m[3], 10)}/${m[1]}`;
   },
 
+  /** Compact column header: 7/20 or 7/20/25 when not current year */
+  formatDateColumn(isoDate, refDate = new Date()) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+    if (!m) return isoDate;
+    const year = parseInt(m[1], 10);
+    const month = parseInt(m[2], 10);
+    const day = parseInt(m[3], 10);
+    if (year === refDate.getFullYear()) return `${month}/${day}`;
+    return `${month}/${day}/${String(year).slice(-2)}`;
+  },
+
   /**
    * Pair punches in order (skip empties). Odd leftover is ignored for hours.
    * Returns hours as float.
