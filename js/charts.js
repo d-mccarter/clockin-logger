@@ -86,14 +86,26 @@ const Charts = {
     return { min: lo, max: hi, ticks };
   },
 
+  /** Non-empty punch count for a day. */
+  _punchCount(day) {
+    return (day.times || []).filter((t) => t != null && t !== '').length;
+  },
+
+  /** Charts only use days with paired in/out punches (even count, at least 2). */
+  _isCompleteDay(day) {
+    const n = this._punchCount(day);
+    return n >= 2 && n % 2 === 0;
+  },
+
   /**
-   * Build chart series from day records.
+   * Build chart series from day records (complete days only).
    * @returns {{ date: string, firstIn: number|null, lastOut: number|null, hours: number }[]}
    */
   buildSeries(days) {
     return (days || [])
       .slice()
       .sort((a, b) => a.date.localeCompare(b.date))
+      .filter((day) => this._isCompleteDay(day))
       .map((day) => {
         const punches = (day.times || [])
           .map((t) => (t == null || t === '' ? null : TimesFormat.parseTimeToken(t)))
