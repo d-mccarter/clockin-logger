@@ -128,56 +128,63 @@ const App = {
 
   renderTable() {
     const tbody = document.getElementById('times-table-body');
-    const hoursBody = document.getElementById('hours-table-body');
     const theadRow = document.getElementById('times-table-head-row');
-    const days = ClockerStore.getDays().slice().reverse(); // newest first for phone use
-
-    const maxTimes = days.reduce((max, d) => Math.max(max, (d.times || []).length), 4);
+    const days = ClockerStore.getDays().slice().reverse(); // newest first → left
+    const maxTimes = Math.max(
+      4,
+      days.reduce((max, d) => Math.max(max, (d.times || []).length), 0)
+    );
 
     theadRow.innerHTML = '';
-    const dateTh = document.createElement('th');
-    dateTh.className = 'col-date';
-    dateTh.textContent = 'Date';
-    theadRow.appendChild(dateTh);
-
-    for (let i = 0; i < maxTimes; i++) {
-      const th = document.createElement('th');
-      th.className = 'col-time';
-      th.textContent = i === 0 ? 'Times' : '';
-      theadRow.appendChild(th);
-    }
-
     tbody.innerHTML = '';
-    hoursBody.innerHTML = '';
+
+    const corner = document.createElement('th');
+    corner.className = 'col-label';
+    corner.textContent = '';
+    corner.scope = 'col';
+    theadRow.appendChild(corner);
 
     if (!days.length) {
+      const emptyTh = document.createElement('th');
+      emptyTh.className = 'col-day';
+      emptyTh.textContent = '—';
+      theadRow.appendChild(emptyTh);
+
       const tr = document.createElement('tr');
+      const label = document.createElement('td');
+      label.className = 'col-label';
+      label.textContent = '';
+      tr.appendChild(label);
       const td = document.createElement('td');
-      td.colSpan = maxTimes + 1;
       td.className = 'empty-row';
       td.textContent = 'No times yet — tap FOB In Now to start.';
       tr.appendChild(td);
       tbody.appendChild(tr);
 
-      const hTr = document.createElement('tr');
-      const hTd = document.createElement('td');
-      hTd.className = 'col-total';
-      hTd.textContent = '—';
-      hTr.appendChild(hTd);
-      hoursBody.appendChild(hTr);
-
       this.updateWeekSummary([]);
+      if (document.getElementById('view-charts')?.classList.contains('active')) {
+        this.renderCharts();
+      }
       return;
     }
 
     days.forEach((day) => {
-      const tr = document.createElement('tr');
-      const dateTd = document.createElement('td');
-      dateTd.className = 'col-date';
-      dateTd.textContent = TimesFormat.formatDateMDY(day.date);
-      tr.appendChild(dateTd);
+      const th = document.createElement('th');
+      th.className = 'col-day';
+      th.scope = 'col';
+      th.textContent = TimesFormat.formatDateColumn(day.date);
+      th.title = TimesFormat.formatDateMDY(day.date);
+      theadRow.appendChild(th);
+    });
 
-      for (let i = 0; i < maxTimes; i++) {
+    for (let i = 0; i < maxTimes; i++) {
+      const tr = document.createElement('tr');
+      const label = document.createElement('td');
+      label.className = 'col-label';
+      label.textContent = i === 0 ? 'Times' : '';
+      tr.appendChild(label);
+
+      days.forEach((day) => {
         const td = document.createElement('td');
         const t = day.times[i];
         if (t == null || t === '') {
@@ -191,16 +198,23 @@ const App = {
           td.title = TimesFormat.formatTime12(TimesFormat.parseTimeToken(t));
         }
         tr.appendChild(td);
-      }
+      });
       tbody.appendChild(tr);
+    }
 
-      const hTr = document.createElement('tr');
-      const hTd = document.createElement('td');
-      hTd.className = 'col-total';
-      hTd.textContent = TimesFormat.dayTotalHours(day).toFixed(2);
-      hTr.appendChild(hTd);
-      hoursBody.appendChild(hTr);
+    const hrsTr = document.createElement('tr');
+    hrsTr.className = 'hrs-row';
+    const hrsLabel = document.createElement('td');
+    hrsLabel.className = 'col-label col-total-label';
+    hrsLabel.textContent = 'Hrs';
+    hrsTr.appendChild(hrsLabel);
+    days.forEach((day) => {
+      const td = document.createElement('td');
+      td.className = 'col-total';
+      td.textContent = TimesFormat.dayTotalHours(day).toFixed(2);
+      hrsTr.appendChild(td);
     });
+    tbody.appendChild(hrsTr);
 
     this.updateWeekSummary(days);
     if (document.getElementById('view-charts')?.classList.contains('active')) {

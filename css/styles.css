@@ -248,8 +248,6 @@ body {
 
 .table-shell {
   position: relative;
-  /* Single scrollport so Times + Hrs headers can both stick on vertical scroll.
-     (A nested overflow-x on .times-scroll was trapping sticky and letting only Hrs freeze.) */
   overflow: auto;
   border: 1px solid var(--border-strong);
   border-radius: 12px;
@@ -257,54 +255,18 @@ body {
   max-height: min(52dvh, 480px);
   -webkit-overflow-scrolling: touch;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  --hours-rail-width: 3.35rem;
-}
-
-.table-pane {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  min-width: 100%;
-  width: max-content;
-  min-height: 100%;
-}
-
-.times-scroll {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: visible;
-}
-
-.hours-rail {
-  position: sticky;
-  right: 0;
-  flex: 0 0 var(--hours-rail-width);
-  width: var(--hours-rail-width);
-  z-index: 4;
-  background: #eef1f5;
-  border-left: 1px solid var(--border-strong);
-  box-shadow: -6px 0 10px rgba(28, 34, 44, 0.1);
-}
-
-.times-table,
-.hours-table {
-  border-collapse: collapse;
-  table-layout: fixed;
-  font-size: 0.68rem;
 }
 
 .times-table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.68rem;
   width: max-content;
-}
-
-.hours-table {
-  width: 100%;
+  min-width: 100%;
 }
 
 .times-table th,
-.times-table td,
-.hours-table th,
-.hours-table td {
+.times-table td {
   border: 1px solid var(--border);
   padding: 3px 4px;
   white-space: nowrap;
@@ -314,8 +276,7 @@ body {
   box-sizing: border-box;
 }
 
-.times-table th,
-.hours-table th {
+.times-table thead th {
   position: sticky;
   top: 0;
   z-index: 2;
@@ -326,48 +287,64 @@ body {
   color: var(--text-muted);
 }
 
-.times-table .col-date {
+.times-table .col-label {
   position: sticky;
   left: 0;
   z-index: 1;
   background: var(--date-bg);
   font-weight: 600;
   text-align: left;
-  width: 4.6rem;
-  min-width: 4.6rem;
-  max-width: 4.6rem;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  max-width: 2.75rem;
   padding-left: 5px;
   padding-right: 4px;
 }
 
-.times-table th.col-date {
+.times-table thead th.col-label {
   z-index: 3;
   left: 0;
   background: #b7d0e8;
 }
 
-.times-table .col-time,
+.times-table .col-day,
 .times-table td.punch-cell,
-.times-table td.punch-empty {
-  width: 3.15rem;
-  min-width: 3.15rem;
-  max-width: 3.15rem;
+.times-table td.punch-empty,
+.times-table td.col-total {
+  width: 3.35rem;
+  min-width: 3.35rem;
+  max-width: 3.35rem;
   padding-left: 2px;
   padding-right: 2px;
 }
 
-.hours-table .col-total,
-.times-table .col-total {
+.times-table thead th.col-day {
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--text);
+  background: #d4dae3;
+}
+
+.times-table .col-total,
+.times-table .col-total-label {
   font-family: var(--mono);
   font-weight: 600;
   background: #eef1f5;
-  width: 100%;
-  padding-left: 3px;
-  padding-right: 3px;
 }
 
-.hours-table th.col-total {
-  z-index: 5;
+.times-table tr.hrs-row td {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #eef1f5;
+  border-top: 2px solid var(--border-strong);
+}
+
+.times-table tr.hrs-row .col-label {
+  z-index: 3;
   background: #d4dae3;
 }
 
@@ -395,6 +372,9 @@ body {
   padding: 12px 8px !important;
   height: auto !important;
   white-space: normal !important;
+  min-width: 12rem !important;
+  width: auto !important;
+  max-width: none !important;
 }
 
 .panel {
