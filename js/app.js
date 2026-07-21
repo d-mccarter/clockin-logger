@@ -162,6 +162,7 @@ const App = {
       tbody.appendChild(tr);
 
       this.updateWeekSummary([]);
+      this.syncTodayTicker([]);
       if (document.getElementById('view-charts')?.classList.contains('active')) {
         this.renderCharts();
       }
@@ -208,15 +209,22 @@ const App = {
     hrsLabel.className = 'col-label col-total-label';
     hrsLabel.textContent = 'Hrs';
     hrsTr.appendChild(hrsLabel);
+    const todayIso = TimesFormat.dateToIsoDay(new Date());
     days.forEach((day) => {
       const td = document.createElement('td');
       td.className = 'col-total';
-      td.textContent = TimesFormat.dayTotalHours(day).toFixed(2);
+      if (day.date === todayIso) td.dataset.todayHours = '1';
+      const hours =
+        day.date === todayIso
+          ? TimesFormat.dayCumulativeHours(day) ?? 0
+          : TimesFormat.dayTotalHours(day);
+      td.textContent = hours.toFixed(2);
       hrsTr.appendChild(td);
     });
     tbody.appendChild(hrsTr);
 
     this.updateWeekSummary(days);
+    this.syncTodayTicker(days);
     if (document.getElementById('view-charts')?.classList.contains('active')) {
       this.renderCharts();
     }
@@ -276,19 +284,55 @@ const App = {
     if (!el) return;
     const days = daysNewestFirst.slice().reverse();
     const now = new Date();
+    const todayIso = TimesFormat.dateToIsoDay(now);
     const start = new Date(now);
     start.setDate(now.getDate() - ((now.getDay() + 6) % 7)); // Monday
     start.setHours(0, 0, 0, 0);
     const startIso = TimesFormat.dateToIsoDay(start);
-    const endIso = TimesFormat.dateToIsoDay(now);
+    const endIso = todayIso;
+    const todayDay = days.find((d) => d.date === todayIso);
+    const todayHours =
+      todayDay && TimesFormat.dayHasPunches(todayDay)
+        ? TimesFormat.dayCumulativeHours(todayDay, now)
+        : null;
+
     let weekHours = 0;
     let allHours = 0;
     days.forEach((d) => {
-      const h = TimesFormat.dayTotalHours(d);
+      const h =
+        d.date === todayIso
+          ? TimesFormat.dayCumulativeHours(d, now) ?? 0
+          : TimesFormat.dayTotalHours(d);
       allHours += h;
       if (d.date >= startIso && d.date <= endIso) weekHours += h;
     });
-    el.textContent = `This week ${weekHours.toFixed(2)}h · All ${allHours.toFixed(2)}h`;
+
+    const parts = [];
+    if (todayHours != null) parts.push(`Today ${todayHours.toFixed(2)}h`);
+    parts.push(`This week ${weekHours.toFixed(2)}h`);
+    parts.push(`All ${allHours.toFixed(2)}h`);
+    el.textContent = parts.join(' · ');
+  },
+
+  /** Refresh today cumulative while an open clock-in is running. */
+  syncTodayTicker(daysNewestFirst) {
+    clearInterval(this._todayTicker);
+    this._todayTicker = null;
+    const todayIso = TimesFormat.dateToIsoDay(new Date());
+    const todayDay = (daysNewestFirst || []).find((d) => d.date === todayIso);
+    if (!todayDay || !TimesFormat.dayHasPunches(todayDay)) return;
+    const punches = TimesFormat.dayMinutes(todayDay).filter((t) => t != null && !Number.isNaN(t));
+    if (punches.length % 2 !== 1) return;
+
+    this._todayTicker = setInterval(() => {
+      const days = ClockerStore.getDays().slice().reverse();
+      this.updateWeekSummary(days);
+      const hrsCell = document.querySelector('#times-table-body tr.hrs-row td[data-today-hours]');
+      const fresh = days.find((d) => d.date === todayIso);
+      if (hrsCell && fresh) {
+        hrsCell.textContent = (TimesFormat.dayCumulativeHours(fresh) ?? 0).toFixed(2);
+      }
+    }, 30000);
   },
 
   flashStatus(message, type = 'info') {
