@@ -11,7 +11,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <script>
     // Shell build must match build.json. Used to bust Safari's sticky HTML cache.
-    window.__CLOCKER_SHELL__ = 21;
+    window.__CLOCKER_SHELL__ = 23;
     (function () {
       // Clear any previously installed service worker. Do NOT reload here —
       // a reload loop was freezing Firefox/Safari.
@@ -74,7 +74,7 @@
     }
     .app-header h1 { margin: 0; padding: 14px; font-size: 1.25rem; }
   </style>
-  <link rel="stylesheet" href="css/styles.css?v=21">
+  <link rel="stylesheet" href="css/styles.css?v=23">
 </head>
 <body style="background:#d8dde4;color:#1c222c;">
   <header class="app-header">
@@ -121,26 +121,33 @@
           </select>
         </label>
         <p class="field-hint" id="charts-summary">Add punches to see trends.</p>
+        <p class="field-hint">Hover or drag on a chart to inspect date and value.</p>
       </div>
 
       <div class="panel chart-card">
         <h3>First clock-in</h3>
         <p class="field-hint">Earliest punch each day (paired days only)</p>
-        <canvas id="chart-first-in" height="200" aria-label="First clock-in over time"></canvas>
+        <div class="chart-plot">
+          <canvas id="chart-first-in" height="200" aria-label="First clock-in over time"></canvas>
+        </div>
         <p class="empty-state" id="chart-first-in-empty" hidden>Not enough data yet.</p>
       </div>
 
       <div class="panel chart-card">
         <h3>Last clock-out</h3>
         <p class="field-hint">Latest punch each day (paired days only)</p>
-        <canvas id="chart-last-out" height="200" aria-label="Last clock-out over time"></canvas>
+        <div class="chart-plot">
+          <canvas id="chart-last-out" height="200" aria-label="Last clock-out over time"></canvas>
+        </div>
         <p class="empty-state" id="chart-last-out-empty" hidden>Not enough data yet.</p>
       </div>
 
       <div class="panel chart-card">
         <h3>Hours per day</h3>
         <p class="field-hint">Total hours on days with paired in/out punches</p>
-        <canvas id="chart-hours" height="200" aria-label="Hours worked per day"></canvas>
+        <div class="chart-plot">
+          <canvas id="chart-hours" height="200" aria-label="Hours worked per day"></canvas>
+        </div>
         <p class="empty-state" id="chart-hours-empty" hidden>Not enough data yet.</p>
       </div>
     </section>
@@ -239,10 +246,10 @@
     </div>
   </div>
 
-  <script src="js/times-format.js?v=21"></script>
-  <script src="js/github-sync.js?v=21"></script>
-  <script src="js/storage.js?v=21"></script>
-  <script src="js/charts.js?v=21"></script>
-  <script src="js/app.js?v=21"></script>
+  <script src="js/times-format.js?v=23"></script>
+  <script src="js/github-sync.js?v=23"></script>
+  <script src="js/storage.js?v=23"></script>
+  <script src="js/charts.js?v=23"></script>
+  <script src="js/app.js?v=23"></script>
 </body>
 </html>

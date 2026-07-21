@@ -3,24 +3,21 @@
 const Charts = {
   /** Logical CSS height — never re-read canvas.height after DPR scaling. */
   CHART_HEIGHT: 200,
+  _CANVAS_IDS: ['chart-first-in', 'chart-last-out', 'chart-hours'],
+  _interactionsBound: false,
 
   _setupCanvas(canvas) {
     const dpr = window.devicePixelRatio || 1;
     const parent = canvas.parentElement;
     const parentW = parent ? parent.clientWidth : 0;
     const rect = canvas.getBoundingClientRect();
-    // Prefer parent width so Safari select/viewport quirks don't inflate size.
     const w = Math.max(280, Math.round(parentW || rect.width || canvas.clientWidth || 300));
     const h = this.CHART_HEIGHT;
 
-    // CSS layout size in CSS pixels (must match the logical draw size below).
     canvas.style.width = `${w}px`;
     canvas.style.height = `${h}px`;
     canvas.style.maxHeight = `${h}px`;
 
-    // Backing store in device pixels. Do NOT removeAttribute('width'/'height'):
-    // on Safari that resets the bitmap to 300×150 while setTransform(dpr)
-    // still scales drawing — charts look massively zoomed.
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
 
@@ -35,10 +32,6 @@ const Charts = {
     return `${parseInt(m[2], 10)}/${parseInt(m[3], 10)}`;
   },
 
-  /**
-   * Snap a minutes domain to half-hour boundaries and pick tick step
-   * (30, 60, or 120 minutes) so labels stay readable.
-   */
   _niceTimeScale(dataMin, dataMax) {
     const half = 30;
     let lo = Math.floor(dataMin / half) * half;
@@ -47,7 +40,6 @@ const Charts = {
       lo -= half;
       hi += half;
     }
-    // Breathing room when a point sits on a boundary
     if (dataMin <= lo) lo -= half;
     if (dataMax >= hi) hi += half;
 
@@ -65,7 +57,6 @@ const Charts = {
     return { min: lo, max: hi, ticks };
   },
 
-  /** Nice numeric scale for hours (0-based preferred). */
   _niceHoursScale(dataMin, dataMax, forceMin) {
     const min0 = forceMin != null ? forceMin : dataMin;
     const max0 = Math.max(dataMax, min0 + 0.5);
@@ -86,21 +77,30 @@ const Charts = {
     return { min: lo, max: hi, ticks };
   },
 
-  /** Non-empty punch count for a day. */
+  _roundRect(ctx, x, y, width, height, radius) {
+    const r = Math.min(radius, width / 2, height / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + width - r, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+    ctx.lineTo(x + width, y + height - r);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+    ctx.lineTo(x + r, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  },
+
   _punchCount(day) {
     return (day.times || []).filter((t) => t != null && t !== '').length;
   },
 
-  /** Charts only use days with paired in/out punches (even count, at least 2). */
   _isCompleteDay(day) {
     const n = this._punchCount(day);
     return n >= 2 && n % 2 === 0;
   },
 
-  /**
-   * Build chart series from day records (complete days only).
-   * @returns {{ date: string, firstIn: number|null, lastOut: number|null, hours: number }[]}
-   */
   buildSeries(days) {
     return (days || [])
       .slice()
@@ -133,13 +133,83 @@ const Charts = {
     return series.filter((row) => row.date >= startIso);
   },
 
+  _nearestIndex(canvas, clientX) {
+    const state = canvas._clockerChart;
+    if (!state?.coords?.length) return null;
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    let best = 0;
+    let bestDist = Infinity;
+    state.coords.forEach((c, i) => {
+      const d = Math.abs(c.x - x);
+      if (d < bestDist) {
+        bestDist = d;
+        best = i;
+      }
+    });
+    return best;
+  },
+
+  _drawCrosshair(ctx, w, h, padding, coord, options, point) {
+    const color = options.color || '#e87a2e';
+    const chartBottom = h - padding.bottom;
+
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.9;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(coord.x, padding.top);
+    ctx.lineTo(coord.x, chartBottom);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+
+    ctx.beginPath();
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.arc(coord.x, coord.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    const label = options.formatTooltip
+      ? options.formatTooltip(point.date, point.value)
+      : `${TimesFormat.formatDateMDY(point.date)} · ${point.value}`;
+
+    ctx.font = '600 11px "IBM Plex Sans", "Avenir Next", sans-serif';
+    const tw = ctx.measureText(label).width;
+    const padX = 8;
+    const boxW = tw + padX * 2;
+    const boxH = 22;
+    let boxX = coord.x - boxW / 2;
+    boxX = Math.max(padding.left, Math.min(boxX, w - padding.right - boxW));
+    const boxY = padding.top + 2;
+
+    this._roundRect(ctx, boxX, boxY, boxW, boxH, 6);
+    ctx.fillStyle = 'rgba(28, 34, 44, 0.9)';
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, boxX + boxW / 2, boxY + boxH / 2);
+    ctx.restore();
+  },
+
   _drawLineChart(canvas, points, options) {
+    const prevHover = canvas._clockerChart?.hoverIdx;
+    const hoverIdx = options.hoverIdx != null ? options.hoverIdx : prevHover;
+
     const { ctx, w, h } = this._setupCanvas(canvas);
     const padding = { top: 14, right: 12, bottom: 28, left: 48 };
     ctx.clearRect(0, 0, w, h);
 
     const usable = points.filter((p) => p.value != null && !Number.isNaN(p.value));
-    if (!usable.length) return false;
+    if (!usable.length) {
+      canvas._clockerChart = null;
+      return false;
+    }
 
     const values = usable.map((p) => p.value);
     const dataMin = Math.min(...values);
@@ -168,7 +238,6 @@ const Charts = {
     const chartW = w - padding.left - padding.right;
     const chartH = h - padding.top - padding.bottom;
 
-    // Grid + Y labels at nice tick values
     ctx.strokeStyle = '#c5ccd6';
     ctx.lineWidth = 1;
     ctx.fillStyle = '#5a6575';
@@ -213,7 +282,8 @@ const Charts = {
       ctx.stroke();
     }
 
-    coords.forEach((c) => {
+    coords.forEach((c, i) => {
+      if (hoverIdx != null && i === hoverIdx) return;
       ctx.beginPath();
       ctx.fillStyle = options.color || '#e87a2e';
       ctx.arc(c.x, c.y, usable.length > 60 ? 2 : 3.5, 0, Math.PI * 2);
@@ -233,7 +303,96 @@ const Charts = {
       ctx.fillText(this._formatShortDate(c.point.date), c.x, h - 8);
     });
 
+    const safeHover = hoverIdx != null && coords[hoverIdx] ? hoverIdx : null;
+    if (safeHover != null) {
+      this._drawCrosshair(ctx, w, h, padding, coords[safeHover], options, coords[safeHover].point);
+    }
+
+    const { hoverIdx: _drop, ...drawOptions } = options;
+    canvas._clockerChart = {
+      points,
+      drawOptions,
+      coords,
+      padding,
+      w,
+      h,
+      hoverIdx: safeHover
+    };
+
     return true;
+  },
+
+  _redrawCanvas(canvas) {
+    const state = canvas._clockerChart;
+    if (!state) return;
+    this._drawLineChart(canvas, state.points, {
+      ...state.drawOptions,
+      hoverIdx: state.hoverIdx
+    });
+  },
+
+  _handlePointer(canvas, event) {
+    const state = canvas._clockerChart;
+    if (!state?.coords?.length) return;
+
+    const idx = this._nearestIndex(canvas, event.clientX);
+    if (idx == null || idx === state.hoverIdx) return;
+
+    state.hoverIdx = idx;
+    this._redrawCanvas(canvas);
+  },
+
+  _clearHover(canvas) {
+    const state = canvas._clockerChart;
+    if (!state || state.hoverIdx == null) return;
+    state.hoverIdx = null;
+    this._redrawCanvas(canvas);
+  },
+
+  bindInteractions() {
+    if (this._interactionsBound) return;
+    this._interactionsBound = true;
+
+    this._CANVAS_IDS.forEach((id) => {
+      const canvas = document.getElementById(id);
+      if (!canvas) return;
+
+      canvas.addEventListener('pointerdown', (event) => {
+        if (!canvas._clockerChart) return;
+        canvas.setPointerCapture(event.pointerId);
+        this._handlePointer(canvas, event);
+      });
+
+      canvas.addEventListener('pointermove', (event) => {
+        if (!canvas._clockerChart) return;
+        if (event.pointerType === 'mouse' && event.buttons === 0) {
+          this._handlePointer(canvas, event);
+          return;
+        }
+        if (canvas.hasPointerCapture(event.pointerId)) {
+          event.preventDefault();
+          this._handlePointer(canvas, event);
+        }
+      });
+
+      canvas.addEventListener('pointerup', (event) => {
+        if (canvas.hasPointerCapture(event.pointerId)) {
+          canvas.releasePointerCapture(event.pointerId);
+        }
+      });
+
+      canvas.addEventListener('pointerleave', (event) => {
+        if (event.pointerType === 'mouse') {
+          this._clearHover(canvas);
+        }
+      });
+
+      canvas.addEventListener('pointercancel', (event) => {
+        if (canvas.hasPointerCapture(event.pointerId)) {
+          canvas.releasePointerCapture(event.pointerId);
+        }
+      });
+    });
   },
 
   drawFirstIn(canvas, series) {
@@ -244,7 +403,9 @@ const Charts = {
       color: '#2f6fed',
       fill: 'rgba(47, 111, 237, 0.12)',
       scale: 'time',
-      formatY: (v) => TimesFormat.formatTimeCompact(v)
+      formatY: (v) => TimesFormat.formatTimeCompact(v),
+      formatTooltip: (date, mins) =>
+        `${TimesFormat.formatDateMDY(date)} · ${TimesFormat.formatTimeCompact(mins)}`
     });
   },
 
@@ -256,7 +417,9 @@ const Charts = {
       color: '#c45c1a',
       fill: 'rgba(232, 122, 46, 0.14)',
       scale: 'time',
-      formatY: (v) => TimesFormat.formatTimeCompact(v)
+      formatY: (v) => TimesFormat.formatTimeCompact(v),
+      formatTooltip: (date, mins) =>
+        `${TimesFormat.formatDateMDY(date)} · ${TimesFormat.formatTimeCompact(mins)}`
     });
   },
 
@@ -269,7 +432,9 @@ const Charts = {
       fill: 'rgba(31, 122, 69, 0.12)',
       scale: 'hours',
       min: 0,
-      formatY: (v) => (Number.isInteger(v) ? String(v) : v.toFixed(1))
+      formatY: (v) => (Number.isInteger(v) ? String(v) : v.toFixed(1)),
+      formatTooltip: (date, hrs) =>
+        `${TimesFormat.formatDateMDY(date)} · ${Number(hrs).toFixed(2)} hrs`
     });
   }
 };
