@@ -223,6 +223,7 @@ const App = {
   },
 
   bindCharts() {
+    Charts.bindInteractions();
     const range = document.getElementById('charts-range');
     if (range) {
       range.addEventListener('change', () => this.renderCharts());

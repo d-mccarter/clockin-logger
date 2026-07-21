@@ -576,6 +576,11 @@ textarea {
   margin: 0 0 10px;
 }
 
+.chart-plot {
+  position: relative;
+  width: 100%;
+}
+
 .chart-card canvas {
   display: block;
   width: 100%;
@@ -584,6 +589,8 @@ textarea {
   max-height: 200px;
   border-radius: 8px;
   background: linear-gradient(180deg, #f4f6f9 0%, #e8ecf1 100%);
+  touch-action: none;
+  cursor: crosshair;
 }
 
 .chart-card .empty-state {
