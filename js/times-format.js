@@ -158,6 +158,38 @@ const TimesFormat = {
     return this.calcTotalHours(this.dayMinutes(day));
   },
 
+  dayHasPunches(day) {
+    return (day?.times || []).some((t) => t != null && t !== '');
+  },
+
+  /** Minutes since midnight (fractional seconds included). */
+  minutesOfDay(date = new Date()) {
+    return date.getHours() * 60 + date.getMinutes() + date.getSeconds() / 60;
+  },
+
+  /**
+   * Running total for a day: closed pairs plus open segment to `now`
+   * when the last punch is an unmatched clock-in.
+   * Returns null when the day has no punches.
+   */
+  dayCumulativeHours(day, now = new Date()) {
+    const punches = this.dayMinutes(day).filter((t) => t != null && !Number.isNaN(t));
+    if (!punches.length) return null;
+
+    let totalMins = 0;
+    for (let i = 0; i + 1 < punches.length; i += 2) {
+      let diff = punches[i + 1] - punches[i];
+      if (diff < 0) diff += 1440;
+      totalMins += diff;
+    }
+    if (punches.length % 2 === 1) {
+      let open = this.minutesOfDay(now) - punches[punches.length - 1];
+      if (open < 0) open = 0;
+      totalMins += open;
+    }
+    return Math.round((totalMins / 60) * 100) / 100;
+  },
+
   /** Parse LabVIEW times.txt (tab or multi-space delimited). */
   parseTimesTxt(text) {
     const days = [];
