@@ -255,18 +255,20 @@ const App = {
       }
     }
 
-    const draw = (canvasId, emptyId, drawer) => {
+    const draw = (canvasId, emptyId, legendId, drawer) => {
       const canvas = document.getElementById(canvasId);
       const empty = document.getElementById(emptyId);
+      const legend = legendId ? document.getElementById(legendId) : null;
       if (!canvas) return;
       const ok = drawer(canvas, series);
       canvas.hidden = !ok;
       if (empty) empty.hidden = ok;
+      if (legend) legend.hidden = !ok;
     };
 
-    draw('chart-first-in', 'chart-first-in-empty', (c, s) => Charts.drawFirstIn(c, s));
-    draw('chart-last-out', 'chart-last-out-empty', (c, s) => Charts.drawLastOut(c, s));
-    draw('chart-hours', 'chart-hours-empty', (c, s) => Charts.drawHours(c, s));
+    draw('chart-first-in', 'chart-first-in-empty', 'chart-first-in-legend', (c, s) => Charts.drawFirstIn(c, s));
+    draw('chart-last-out', 'chart-last-out-empty', 'chart-last-out-legend', (c, s) => Charts.drawLastOut(c, s));
+    draw('chart-hours', 'chart-hours-empty', 'chart-hours-legend', (c, s) => Charts.drawHours(c, s));
   },
 
   updateWeekSummary(daysNewestFirst) {

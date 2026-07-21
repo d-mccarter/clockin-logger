@@ -150,6 +150,23 @@ const Charts = {
     return best;
   },
 
+  _drawReferenceLines(ctx, w, padding, chartH, minV, range, referenceLines) {
+    if (!referenceLines?.length) return;
+    ctx.save();
+    ctx.strokeStyle = '#c62828';
+    ctx.lineWidth = 1.75;
+    ctx.setLineDash([5, 4]);
+    referenceLines.forEach((ref) => {
+      const y = padding.top + chartH - ((ref.value - minV) / range) * chartH;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, y);
+      ctx.lineTo(w - padding.right, y);
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+    ctx.restore();
+  },
+
   _drawCrosshair(ctx, w, h, padding, coord, options, point) {
     const color = options.color || '#e87a2e';
     const chartBottom = h - padding.bottom;
@@ -212,8 +229,9 @@ const Charts = {
     }
 
     const values = usable.map((p) => p.value);
-    const dataMin = Math.min(...values);
-    const dataMax = Math.max(...values);
+    const refValues = (options.referenceLines || []).map((r) => r.value);
+    const dataMin = Math.min(...values, ...(refValues.length ? refValues : values));
+    const dataMax = Math.max(...values, ...(refValues.length ? refValues : values));
 
     let scale;
     if (options.scale === 'time') {
@@ -258,6 +276,8 @@ const Charts = {
       y: padding.top + chartH - ((p.value - minV) / range) * chartH,
       point: p
     }));
+
+    this._drawReferenceLines(ctx, w, padding, chartH, minV, range, options.referenceLines);
 
     if (coords.length > 1 && options.fill) {
       ctx.beginPath();
@@ -405,7 +425,8 @@ const Charts = {
       scale: 'time',
       formatY: (v) => TimesFormat.formatTimeCompact(v),
       formatTooltip: (date, mins) =>
-        `${TimesFormat.formatDateMDY(date)} · ${TimesFormat.formatTimeCompact(mins)}`
+        `${TimesFormat.formatDateMDY(date)} · ${TimesFormat.formatTimeCompact(mins)}`,
+      referenceLines: [{ value: 9 * 60, label: '9 AM target' }]
     });
   },
 
@@ -419,7 +440,8 @@ const Charts = {
       scale: 'time',
       formatY: (v) => TimesFormat.formatTimeCompact(v),
       formatTooltip: (date, mins) =>
-        `${TimesFormat.formatDateMDY(date)} · ${TimesFormat.formatTimeCompact(mins)}`
+        `${TimesFormat.formatDateMDY(date)} · ${TimesFormat.formatTimeCompact(mins)}`,
+      referenceLines: [{ value: 18 * 60, label: '6 PM target' }]
     });
   },
 
@@ -434,7 +456,8 @@ const Charts = {
       min: 0,
       formatY: (v) => (Number.isInteger(v) ? String(v) : v.toFixed(1)),
       formatTooltip: (date, hrs) =>
-        `${TimesFormat.formatDateMDY(date)} · ${Number(hrs).toFixed(2)} hrs`
+        `${TimesFormat.formatDateMDY(date)} · ${Number(hrs).toFixed(2)} hrs`,
+      referenceLines: [{ value: 9, label: '9 hr target' }]
     });
   }
 };

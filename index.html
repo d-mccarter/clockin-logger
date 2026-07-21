@@ -11,7 +11,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <script>
     // Shell build must match build.json. Used to bust Safari's sticky HTML cache.
-    window.__CLOCKER_SHELL__ = 23;
+    window.__CLOCKER_SHELL__ = 24;
     (function () {
       // Clear any previously installed service worker. Do NOT reload here —
       // a reload loop was freezing Firefox/Safari.
@@ -74,7 +74,7 @@
     }
     .app-header h1 { margin: 0; padding: 14px; font-size: 1.25rem; }
   </style>
-  <link rel="stylesheet" href="css/styles.css?v=23">
+  <link rel="stylesheet" href="css/styles.css?v=24">
 </head>
 <body style="background:#d8dde4;color:#1c222c;">
   <header class="app-header">
@@ -130,6 +130,9 @@
         <div class="chart-plot">
           <canvas id="chart-first-in" height="200" aria-label="First clock-in over time"></canvas>
         </div>
+        <ul class="chart-legend" id="chart-first-in-legend" hidden>
+          <li><span class="chart-legend-line" aria-hidden="true"></span>9 AM target</li>
+        </ul>
         <p class="empty-state" id="chart-first-in-empty" hidden>Not enough data yet.</p>
       </div>
 
@@ -139,6 +142,9 @@
         <div class="chart-plot">
           <canvas id="chart-last-out" height="200" aria-label="Last clock-out over time"></canvas>
         </div>
+        <ul class="chart-legend" id="chart-last-out-legend" hidden>
+          <li><span class="chart-legend-line" aria-hidden="true"></span>6 PM target</li>
+        </ul>
         <p class="empty-state" id="chart-last-out-empty" hidden>Not enough data yet.</p>
       </div>
 
@@ -148,6 +154,9 @@
         <div class="chart-plot">
           <canvas id="chart-hours" height="200" aria-label="Hours worked per day"></canvas>
         </div>
+        <ul class="chart-legend" id="chart-hours-legend" hidden>
+          <li><span class="chart-legend-line" aria-hidden="true"></span>9 hr target</li>
+        </ul>
         <p class="empty-state" id="chart-hours-empty" hidden>Not enough data yet.</p>
       </div>
     </section>
@@ -246,10 +255,10 @@
     </div>
   </div>
 
-  <script src="js/times-format.js?v=23"></script>
-  <script src="js/github-sync.js?v=23"></script>
-  <script src="js/storage.js?v=23"></script>
-  <script src="js/charts.js?v=23"></script>
-  <script src="js/app.js?v=23"></script>
+  <script src="js/times-format.js?v=24"></script>
+  <script src="js/github-sync.js?v=24"></script>
+  <script src="js/storage.js?v=24"></script>
+  <script src="js/charts.js?v=24"></script>
+  <script src="js/app.js?v=24"></script>
 </body>
 </html>
