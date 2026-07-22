@@ -181,13 +181,19 @@ const Charts = {
     return months;
   },
 
+  /** Cursor date for one chart canvas, or null. */
+  getCursorDate(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    const state = canvas?._clockerChart;
+    if (state?.hoverIdx == null || !state.coords?.[state.hoverIdx]) return null;
+    return state.coords[state.hoverIdx].point.date;
+  },
+
   /** Active crosshair date across charts, or null. */
   getActiveCursorDate() {
     for (const id of this._CANVAS_IDS) {
-      const canvas = document.getElementById(id);
-      const state = canvas?._clockerChart;
-      if (state?.hoverIdx == null || !state.coords?.[state.hoverIdx]) continue;
-      return state.coords[state.hoverIdx].point.date;
+      const date = this.getCursorDate(id);
+      if (date) return date;
     }
     return null;
   },
@@ -415,13 +421,13 @@ const Charts = {
     if (!state || state.hoverIdx == null) return;
     state.hoverIdx = null;
     this._redrawCanvas(canvas);
-    if (typeof this.onCursorChange === 'function') this.onCursorChange(this.getActiveCursorDate());
+    this._emitCursorChange(canvas);
   },
 
-  _emitCursorChange() {
-    if (typeof this.onCursorChange === 'function') {
-      this.onCursorChange(this.getActiveCursorDate());
-    }
+  _emitCursorChange(canvas) {
+    if (typeof this.onCursorChange !== 'function') return;
+    const id = canvas?.id || null;
+    this.onCursorChange(id, id ? this.getCursorDate(id) : null);
   },
 
   _handlePointer(canvas, event) {
@@ -433,20 +439,7 @@ const Charts = {
 
     state.hoverIdx = idx;
     this._redrawCanvas(canvas);
-    this._emitCursorChange();
-  },
-
-  _maybeJump(canvas, event) {
-    const state = canvas._clockerChart;
-    if (!state?.coords?.length) return;
-    const idx = this._nearestIndex(canvas, event.clientX);
-    if (idx == null) return;
-    const date = state.coords[idx]?.point?.date;
-    if (!date) return;
-    state.hoverIdx = idx;
-    this._redrawCanvas(canvas);
-    this._emitCursorChange();
-    if (typeof this.onJumpToDate === 'function') this.onJumpToDate(date);
+    this._emitCursorChange(canvas);
   },
 
   bindInteractions() {
@@ -457,27 +450,14 @@ const Charts = {
       const canvas = document.getElementById(id);
       if (!canvas) return;
 
-      let lastTapAt = 0;
-      let lastTapX = 0;
-      let lastTapY = 0;
-      let pointerMoved = false;
-      let downX = 0;
-      let downY = 0;
-
       canvas.addEventListener('pointerdown', (event) => {
         if (!canvas._clockerChart) return;
-        pointerMoved = false;
-        downX = event.clientX;
-        downY = event.clientY;
         canvas.setPointerCapture(event.pointerId);
         this._handlePointer(canvas, event);
       });
 
       canvas.addEventListener('pointermove', (event) => {
         if (!canvas._clockerChart) return;
-        if (Math.abs(event.clientX - downX) > 8 || Math.abs(event.clientY - downY) > 8) {
-          pointerMoved = true;
-        }
         if (event.pointerType === 'mouse' && event.buttons === 0) {
           this._handlePointer(canvas, event);
           return;
@@ -491,32 +471,6 @@ const Charts = {
       canvas.addEventListener('pointerup', (event) => {
         if (canvas.hasPointerCapture(event.pointerId)) {
           canvas.releasePointerCapture(event.pointerId);
-        }
-        // Mouse uses dblclick; touch uses double-tap.
-        if (event.pointerType === 'mouse' || !canvas._clockerChart || pointerMoved) return;
-
-        const now = Date.now();
-        const dx = Math.abs(event.clientX - lastTapX);
-        const dy = Math.abs(event.clientY - lastTapY);
-        if (now - lastTapAt < 350 && dx < 28 && dy < 28) {
-          lastTapAt = 0;
-          this._maybeJump(canvas, event);
-          return;
-        }
-        lastTapAt = now;
-        lastTapX = event.clientX;
-        lastTapY = event.clientY;
-      });
-
-      canvas.addEventListener('dblclick', (event) => {
-        if (!canvas._clockerChart) return;
-        event.preventDefault();
-        this._maybeJump(canvas, event);
-      });
-
-      canvas.addEventListener('pointerleave', (event) => {
-        if (event.pointerType === 'mouse') {
-          this._clearHover(canvas);
         }
       });
 
