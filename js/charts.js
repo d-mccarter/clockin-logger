@@ -105,7 +105,7 @@ const Charts = {
     return (days || [])
       .slice()
       .sort((a, b) => a.date.localeCompare(b.date))
-      .filter((day) => this._isCompleteDay(day))
+      .filter((day) => this._isCompleteDay(day) && !TimesFormat.isWeekend(day.date))
       .map((day) => {
         const punches = (day.times || [])
           .map((t) => (t == null || t === '' ? null : TimesFormat.parseTimeToken(t)))

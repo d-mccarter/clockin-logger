@@ -108,6 +108,17 @@ const TimesFormat = {
     return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
   },
 
+  /** True when ISO date falls on Saturday or Sunday (local). */
+  isWeekend(isoDate) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+    if (!m) return false;
+    // Noon local avoids DST/timezone day shifts from midnight parsing.
+    const d = new Date(`${m[1]}-${m[2]}-${m[3]}T12:00:00`);
+    if (Number.isNaN(d.getTime())) return false;
+    const day = d.getDay();
+    return day === 0 || day === 6;
+  },
+
   /**
    * Pair punches in order (skip empties). Odd leftover is ignored for hours.
    * Returns hours as float.
