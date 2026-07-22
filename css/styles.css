@@ -334,6 +334,12 @@ body {
   vertical-align: middle;
 }
 
+.times-table thead th.col-day.day-flash,
+.times-table td.day-flash {
+  background: rgba(232, 122, 46, 0.28);
+  transition: background 0.9s ease;
+}
+
 .times-table thead th.col-day .day-weekday,
 .times-table thead th.col-day .day-date {
   display: block;
@@ -587,6 +593,10 @@ textarea {
 
 .chart-controls .field {
   margin: 0;
+}
+
+.chart-controls .btn-secondary {
+  margin-top: 2px;
 }
 
 .chart-card h3 {

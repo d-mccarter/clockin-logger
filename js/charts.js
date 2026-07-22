@@ -120,17 +120,76 @@ const Charts = {
       });
   },
 
-  filterSeries(series, range) {
+  filterSeries(series, range, period) {
+    if (!series?.length) return series || [];
     if (!range || range === 'all') return series;
+
+    if (range === 'week') {
+      const monday = period || TimesFormat.weekStartMonday(series[series.length - 1].date);
+      if (!monday) return series;
+      const end = new Date(`${monday}T12:00:00`);
+      end.setDate(end.getDate() + 6);
+      const endIso = TimesFormat.dateToIsoDay(end);
+      return series.filter((row) => row.date >= monday && row.date <= endIso);
+    }
+
+    if (range === 'month') {
+      const ym = period || series[series.length - 1].date.slice(0, 7);
+      if (!/^\d{4}-\d{2}$/.test(ym)) return series;
+      return series.filter((row) => row.date.startsWith(ym));
+    }
+
     const days = parseInt(range, 10);
     if (!days || Number.isNaN(days)) return series;
-    if (!series.length) return series;
     const last = series[series.length - 1].date;
     const end = new Date(`${last}T12:00:00`);
     const start = new Date(end);
     start.setDate(start.getDate() - (days - 1));
     const startIso = TimesFormat.dateToIsoDay(start);
     return series.filter((row) => row.date >= startIso);
+  },
+
+  /** Unique Monday week starts present in series, newest first. */
+  listWeeks(series) {
+    const seen = new Set();
+    const weeks = [];
+    (series || [])
+      .slice()
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .forEach((row) => {
+        const monday = TimesFormat.weekStartMonday(row.date);
+        if (!monday || seen.has(monday)) return;
+        seen.add(monday);
+        weeks.push(monday);
+      });
+    return weeks;
+  },
+
+  /** Unique YYYY-MM months present in series, newest first. */
+  listMonths(series) {
+    const seen = new Set();
+    const months = [];
+    (series || [])
+      .slice()
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .forEach((row) => {
+        const ym = row.date.slice(0, 7);
+        if (!/^\d{4}-\d{2}$/.test(ym) || seen.has(ym)) return;
+        seen.add(ym);
+        months.push(ym);
+      });
+    return months;
+  },
+
+  /** Active crosshair date across charts, or null. */
+  getActiveCursorDate() {
+    for (const id of this._CANVAS_IDS) {
+      const canvas = document.getElementById(id);
+      const state = canvas?._clockerChart;
+      if (state?.hoverIdx == null || !state.coords?.[state.hoverIdx]) continue;
+      return state.coords[state.hoverIdx].point.date;
+    }
+    return null;
   },
 
   _nearestIndex(canvas, clientX) {
@@ -351,6 +410,20 @@ const Charts = {
     });
   },
 
+  _clearHover(canvas) {
+    const state = canvas._clockerChart;
+    if (!state || state.hoverIdx == null) return;
+    state.hoverIdx = null;
+    this._redrawCanvas(canvas);
+    if (typeof this.onCursorChange === 'function') this.onCursorChange(this.getActiveCursorDate());
+  },
+
+  _emitCursorChange() {
+    if (typeof this.onCursorChange === 'function') {
+      this.onCursorChange(this.getActiveCursorDate());
+    }
+  },
+
   _handlePointer(canvas, event) {
     const state = canvas._clockerChart;
     if (!state?.coords?.length) return;
@@ -360,13 +433,20 @@ const Charts = {
 
     state.hoverIdx = idx;
     this._redrawCanvas(canvas);
+    this._emitCursorChange();
   },
 
-  _clearHover(canvas) {
+  _maybeJump(canvas, event) {
     const state = canvas._clockerChart;
-    if (!state || state.hoverIdx == null) return;
-    state.hoverIdx = null;
+    if (!state?.coords?.length) return;
+    const idx = this._nearestIndex(canvas, event.clientX);
+    if (idx == null) return;
+    const date = state.coords[idx]?.point?.date;
+    if (!date) return;
+    state.hoverIdx = idx;
     this._redrawCanvas(canvas);
+    this._emitCursorChange();
+    if (typeof this.onJumpToDate === 'function') this.onJumpToDate(date);
   },
 
   bindInteractions() {
@@ -377,14 +457,27 @@ const Charts = {
       const canvas = document.getElementById(id);
       if (!canvas) return;
 
+      let lastTapAt = 0;
+      let lastTapX = 0;
+      let lastTapY = 0;
+      let pointerMoved = false;
+      let downX = 0;
+      let downY = 0;
+
       canvas.addEventListener('pointerdown', (event) => {
         if (!canvas._clockerChart) return;
+        pointerMoved = false;
+        downX = event.clientX;
+        downY = event.clientY;
         canvas.setPointerCapture(event.pointerId);
         this._handlePointer(canvas, event);
       });
 
       canvas.addEventListener('pointermove', (event) => {
         if (!canvas._clockerChart) return;
+        if (Math.abs(event.clientX - downX) > 8 || Math.abs(event.clientY - downY) > 8) {
+          pointerMoved = true;
+        }
         if (event.pointerType === 'mouse' && event.buttons === 0) {
           this._handlePointer(canvas, event);
           return;
@@ -399,6 +492,26 @@ const Charts = {
         if (canvas.hasPointerCapture(event.pointerId)) {
           canvas.releasePointerCapture(event.pointerId);
         }
+        // Mouse uses dblclick; touch uses double-tap.
+        if (event.pointerType === 'mouse' || !canvas._clockerChart || pointerMoved) return;
+
+        const now = Date.now();
+        const dx = Math.abs(event.clientX - lastTapX);
+        const dy = Math.abs(event.clientY - lastTapY);
+        if (now - lastTapAt < 350 && dx < 28 && dy < 28) {
+          lastTapAt = 0;
+          this._maybeJump(canvas, event);
+          return;
+        }
+        lastTapAt = now;
+        lastTapX = event.clientX;
+        lastTapY = event.clientY;
+      });
+
+      canvas.addEventListener('dblclick', (event) => {
+        if (!canvas._clockerChart) return;
+        event.preventDefault();
+        this._maybeJump(canvas, event);
       });
 
       canvas.addEventListener('pointerleave', (event) => {

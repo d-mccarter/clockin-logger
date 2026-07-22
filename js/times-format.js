@@ -119,6 +119,44 @@ const TimesFormat = {
     return day === 0 || day === 6;
   },
 
+  /** Monday (ISO week start) for an ISO date, as YYYY-MM-DD. */
+  weekStartMonday(isoDate) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+    if (!m) return null;
+    const d = new Date(`${m[1]}-${m[2]}-${m[3]}T12:00:00`);
+    if (Number.isNaN(d.getTime())) return null;
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return this.dateToIsoDay(d);
+  },
+
+  /** "Jul 2026" for YYYY-MM or ISO date. */
+  formatMonthLabel(ymOrIso) {
+    const m = /^(\d{4})-(\d{2})(?:-\d{2})?$/.exec(ymOrIso);
+    if (!m) return ymOrIso;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthIdx = parseInt(m[2], 10) - 1;
+    if (monthIdx < 0 || monthIdx > 11) return ymOrIso;
+    return `${months[monthIdx]} ${m[1]}`;
+  },
+
+  /** "Jul 20–24, 2026" for a Monday ISO week start (Mon–Fri label). */
+  formatWeekLabel(mondayIso) {
+    const start = /^(\d{4})-(\d{2})-(\d{2})$/.exec(mondayIso);
+    if (!start) return mondayIso;
+    const mon = new Date(`${start[1]}-${start[2]}-${start[3]}T12:00:00`);
+    if (Number.isNaN(mon.getTime())) return mondayIso;
+    const fri = new Date(mon);
+    fri.setDate(mon.getDate() + 4);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const leftMonth = months[mon.getMonth()];
+    const rightMonth = months[fri.getMonth()];
+    const year = fri.getFullYear();
+    if (mon.getMonth() === fri.getMonth()) {
+      return `${leftMonth} ${mon.getDate()}–${fri.getDate()}, ${year}`;
+    }
+    return `${leftMonth} ${mon.getDate()}–${rightMonth} ${fri.getDate()}, ${year}`;
+  },
+
   /**
    * Pair punches in order (skip empties). Odd leftover is ignored for hours.
    * Returns hours as float.
