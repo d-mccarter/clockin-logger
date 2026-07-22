@@ -173,6 +173,7 @@ const App = {
       const th = document.createElement('th');
       th.className = 'col-day';
       th.scope = 'col';
+      th.dataset.date = day.date;
       th.title = TimesFormat.formatDateMDY(day.date);
 
       const weekday = document.createElement('span');
@@ -197,6 +198,7 @@ const App = {
 
       days.forEach((day) => {
         const td = document.createElement('td');
+        td.dataset.date = day.date;
         const t = day.times[i];
         if (t == null || t === '') {
           td.className = 'punch-empty';
@@ -223,6 +225,7 @@ const App = {
     days.forEach((day) => {
       const td = document.createElement('td');
       td.className = 'col-total';
+      td.dataset.date = day.date;
       if (day.date === todayIso) td.dataset.todayHours = '1';
       const hours =
         day.date === todayIso
@@ -242,10 +245,29 @@ const App = {
 
   bindCharts() {
     Charts.bindInteractions();
+    Charts.onCursorChange = (date) => this.updateChartsJumpButton(date);
+    Charts.onJumpToDate = (date) => this.jumpToTableDate(date);
+
     const range = document.getElementById('charts-range');
+    const period = document.getElementById('charts-period');
     if (range) {
-      range.addEventListener('change', () => this.renderCharts());
+      range.addEventListener('change', () => {
+        this.syncChartsPeriodOptions({ preferLatest: true });
+        this.renderCharts();
+      });
     }
+    if (period) {
+      period.addEventListener('change', () => this.renderCharts());
+    }
+
+    const jumpBtn = document.getElementById('charts-jump-btn');
+    if (jumpBtn) {
+      jumpBtn.addEventListener('click', () => {
+        const date = Charts.getActiveCursorDate() || jumpBtn.dataset.date;
+        if (date) this.jumpToTableDate(date);
+      });
+    }
+
     let resizeTimer = null;
     window.addEventListener('resize', () => {
       if (!document.getElementById('view-charts')?.classList.contains('active')) return;
@@ -255,11 +277,108 @@ const App = {
     });
   },
 
+  syncChartsPeriodOptions({ preferLatest = false } = {}) {
+    const range = document.getElementById('charts-range')?.value || '90';
+    const wrap = document.getElementById('charts-period-wrap');
+    const label = document.getElementById('charts-period-label');
+    const select = document.getElementById('charts-period');
+    if (!wrap || !select) return;
+
+    const showPeriod = range === 'week' || range === 'month';
+    wrap.hidden = !showPeriod;
+    if (!showPeriod) {
+      select.innerHTML = '';
+      return;
+    }
+
+    const fullSeries = Charts.buildSeries(ClockerStore.getDays());
+    const prev = preferLatest ? '' : select.value;
+    select.innerHTML = '';
+
+    if (range === 'week') {
+      if (label) label.textContent = 'Week';
+      const weeks = Charts.listWeeks(fullSeries);
+      weeks.forEach((monday) => {
+        const opt = document.createElement('option');
+        opt.value = monday;
+        opt.textContent = TimesFormat.formatWeekLabel(monday);
+        select.appendChild(opt);
+      });
+    } else {
+      if (label) label.textContent = 'Month';
+      const months = Charts.listMonths(fullSeries);
+      months.forEach((ym) => {
+        const opt = document.createElement('option');
+        opt.value = ym;
+        opt.textContent = TimesFormat.formatMonthLabel(ym);
+        select.appendChild(opt);
+      });
+    }
+
+    if (prev && [...select.options].some((o) => o.value === prev)) {
+      select.value = prev;
+    } else if (select.options.length) {
+      select.selectedIndex = 0;
+    }
+  },
+
+  updateChartsJumpButton(date) {
+    const btn = document.getElementById('charts-jump-btn');
+    if (!btn) return;
+    if (!date) {
+      btn.hidden = true;
+      btn.dataset.date = '';
+      btn.textContent = 'Open day in table';
+      return;
+    }
+    btn.hidden = false;
+    btn.dataset.date = date;
+    btn.textContent = `Open ${TimesFormat.formatDateMDY(date)} in table`;
+  },
+
+  showView(view) {
+    const btn = document.querySelector(`.nav-btn[data-view="${view}"]`);
+    if (btn) btn.click();
+  },
+
+  jumpToTableDate(isoDate) {
+    if (!isoDate) return;
+    this.showView('clock');
+    // Ensure the table is painted before scrolling.
+    requestAnimationFrame(() => {
+      const shell = document.getElementById('table-shell');
+      const header = document.querySelector(`#times-table-head-row th.col-day[data-date="${isoDate}"]`);
+      if (!shell || !header) {
+        this.flashStatus(`No table column for ${TimesFormat.formatDateMDY(isoDate)}`, 'error');
+        return;
+      }
+
+      const shellRect = shell.getBoundingClientRect();
+      const headerRect = header.getBoundingClientRect();
+      const delta =
+        headerRect.left - shellRect.left - shellRect.width / 2 + headerRect.width / 2;
+      shell.scrollLeft += delta;
+      shell.scrollTop = 0;
+
+      document.querySelectorAll('.day-flash').forEach((el) => el.classList.remove('day-flash'));
+      const cells = document.querySelectorAll(`#times-table [data-date="${isoDate}"]`);
+      cells.forEach((el) => el.classList.add('day-flash'));
+      clearTimeout(this._dayFlashTimer);
+      this._dayFlashTimer = setTimeout(() => {
+        cells.forEach((el) => el.classList.remove('day-flash'));
+      }, 1600);
+
+      this.flashStatus(`Showing ${TimesFormat.formatDateMDY(isoDate)}`);
+    });
+  },
+
   renderCharts() {
     if (typeof Charts === 'undefined') return;
+    this.syncChartsPeriodOptions();
     const days = ClockerStore.getDays();
     const range = document.getElementById('charts-range')?.value || '90';
-    const series = Charts.filterSeries(Charts.buildSeries(days), range);
+    const period = document.getElementById('charts-period')?.value || '';
+    const series = Charts.filterSeries(Charts.buildSeries(days), range, period);
 
     const summary = document.getElementById('charts-summary');
     if (summary) {
@@ -269,9 +388,14 @@ const App = {
         const withHours = series.filter((row) => row.hours > 0);
         const totalHrs = withHours.reduce((sum, row) => sum + row.hours, 0);
         const avg = withHours.length ? totalHrs / withHours.length : 0;
-        summary.textContent = `${series.length} day${series.length === 1 ? '' : 's'} · avg ${avg.toFixed(2)}h/day`;
+        let scope = '';
+        if (range === 'week' && period) scope = `${TimesFormat.formatWeekLabel(period)} · `;
+        else if (range === 'month' && period) scope = `${TimesFormat.formatMonthLabel(period)} · `;
+        summary.textContent = `${scope}${series.length} day${series.length === 1 ? '' : 's'} · avg ${avg.toFixed(2)}h/day`;
       }
     }
+
+    this.updateChartsJumpButton(Charts.getActiveCursorDate());
 
     const draw = (canvasId, emptyId, legendId, drawer) => {
       const canvas = document.getElementById(canvasId);

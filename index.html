@@ -11,7 +11,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <script>
     // Shell build must match build.json. Used to bust Safari's sticky HTML cache.
-    window.__CLOCKER_SHELL__ = 28;
+    window.__CLOCKER_SHELL__ = 29;
     (function () {
       // Clear any previously installed service worker. Do NOT reload here —
       // a reload loop was freezing Firefox/Safari.
@@ -74,7 +74,7 @@
     }
     .app-header h1 { margin: 0; padding: 14px; font-size: 1.25rem; }
   </style>
-  <link rel="stylesheet" href="css/styles.css?v=28">
+  <link rel="stylesheet" href="css/styles.css?v=29">
 </head>
 <body style="background:#d8dde4;color:#1c222c;">
   <header class="app-header">
@@ -118,10 +118,17 @@
             <option value="30">Last 30 days</option>
             <option value="90" selected>Last 90 days</option>
             <option value="all">All time</option>
+            <option value="week">Specific week</option>
+            <option value="month">Specific month</option>
           </select>
         </label>
+        <label class="field" id="charts-period-wrap" hidden>
+          <span id="charts-period-label">Period</span>
+          <select id="charts-period"></select>
+        </label>
         <p class="field-hint" id="charts-summary">Add punches to see trends.</p>
-        <p class="field-hint">Hover or drag on a chart to inspect date and value.</p>
+        <p class="field-hint">Hover or drag to inspect. Double-tap a cursor to open that day in the table.</p>
+        <button type="button" class="btn-secondary" id="charts-jump-btn" hidden>Open day in table</button>
       </div>
 
       <div class="panel chart-card">
@@ -255,10 +262,10 @@
     </div>
   </div>
 
-  <script src="js/times-format.js?v=28"></script>
-  <script src="js/github-sync.js?v=28"></script>
-  <script src="js/storage.js?v=28"></script>
-  <script src="js/charts.js?v=28"></script>
-  <script src="js/app.js?v=28"></script>
+  <script src="js/times-format.js?v=29"></script>
+  <script src="js/github-sync.js?v=29"></script>
+  <script src="js/storage.js?v=29"></script>
+  <script src="js/charts.js?v=29"></script>
+  <script src="js/app.js?v=29"></script>
 </body>
 </html>
