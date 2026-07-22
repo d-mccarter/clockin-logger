@@ -326,6 +326,30 @@ body {
   font-weight: 700;
   color: var(--text);
   background: #d4dae3;
+  height: auto;
+  min-height: 2.35rem;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  line-height: 1.15;
+  vertical-align: middle;
+}
+
+.times-table thead th.col-day .day-weekday,
+.times-table thead th.col-day .day-date {
+  display: block;
+}
+
+.times-table thead th.col-day .day-weekday {
+  font-size: 0.58rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.times-table thead th.col-day .day-date {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--text);
 }
 
 .times-table .col-total,

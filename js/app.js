@@ -173,8 +173,18 @@ const App = {
       const th = document.createElement('th');
       th.className = 'col-day';
       th.scope = 'col';
-      th.textContent = TimesFormat.formatDateColumn(day.date);
       th.title = TimesFormat.formatDateMDY(day.date);
+
+      const weekday = document.createElement('span');
+      weekday.className = 'day-weekday';
+      weekday.textContent = TimesFormat.formatWeekdayAbbrev(day.date);
+
+      const date = document.createElement('span');
+      date.className = 'day-date';
+      date.textContent = TimesFormat.formatDateColumn(day.date);
+
+      th.appendChild(weekday);
+      th.appendChild(date);
       theadRow.appendChild(th);
     });
 
