@@ -453,7 +453,6 @@ const Charts = {
       color: '#1f7a45',
       fill: 'rgba(31, 122, 69, 0.12)',
       scale: 'hours',
-      min: 0,
       formatY: (v) => (Number.isInteger(v) ? String(v) : v.toFixed(1)),
       formatTooltip: (date, hrs) =>
         `${TimesFormat.formatDateMDY(date)} · ${Number(hrs).toFixed(2)} hrs`,
