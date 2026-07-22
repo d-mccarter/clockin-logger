@@ -245,8 +245,7 @@ const App = {
 
   bindCharts() {
     Charts.bindInteractions();
-    Charts.onCursorChange = (date) => this.updateChartsJumpButton(date);
-    Charts.onJumpToDate = (date) => this.jumpToTableDate(date);
+    Charts.onCursorChange = (canvasId, date) => this.updateChartJumpButton(canvasId, date);
 
     const range = document.getElementById('charts-range');
     const period = document.getElementById('charts-period');
@@ -260,13 +259,13 @@ const App = {
       period.addEventListener('change', () => this.renderCharts());
     }
 
-    const jumpBtn = document.getElementById('charts-jump-btn');
-    if (jumpBtn) {
-      jumpBtn.addEventListener('click', () => {
-        const date = Charts.getActiveCursorDate() || jumpBtn.dataset.date;
+    document.querySelectorAll('.chart-jump-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const canvasId = btn.dataset.chart;
+        const date = Charts.getCursorDate(canvasId) || btn.dataset.date;
         if (date) this.jumpToTableDate(date);
       });
-    }
+    });
 
     let resizeTimer = null;
     window.addEventListener('resize', () => {
@@ -322,8 +321,9 @@ const App = {
     }
   },
 
-  updateChartsJumpButton(date) {
-    const btn = document.getElementById('charts-jump-btn');
+  updateChartJumpButton(canvasId, date) {
+    if (!canvasId) return;
+    const btn = document.querySelector(`.chart-jump-btn[data-chart="${canvasId}"]`);
     if (!btn) return;
     if (!date) {
       btn.hidden = true;
@@ -334,6 +334,12 @@ const App = {
     btn.hidden = false;
     btn.dataset.date = date;
     btn.textContent = `Open ${TimesFormat.formatDateMDY(date)} in table`;
+  },
+
+  syncChartJumpButtons() {
+    (Charts._CANVAS_IDS || []).forEach((id) => {
+      this.updateChartJumpButton(id, Charts.getCursorDate(id));
+    });
   },
 
   showView(view) {
@@ -395,17 +401,22 @@ const App = {
       }
     }
 
-    this.updateChartsJumpButton(Charts.getActiveCursorDate());
+    this.syncChartJumpButtons();
 
     const draw = (canvasId, emptyId, legendId, drawer) => {
       const canvas = document.getElementById(canvasId);
       const empty = document.getElementById(emptyId);
       const legend = legendId ? document.getElementById(legendId) : null;
+      const jumpBtn = document.querySelector(`.chart-jump-btn[data-chart="${canvasId}"]`);
       if (!canvas) return;
       const ok = drawer(canvas, series);
       canvas.hidden = !ok;
       if (empty) empty.hidden = ok;
       if (legend) legend.hidden = !ok;
+      if (!ok && jumpBtn) {
+        jumpBtn.hidden = true;
+        jumpBtn.dataset.date = '';
+      }
     };
 
     draw('chart-first-in', 'chart-first-in-empty', 'chart-first-in-legend', (c, s) => Charts.drawFirstIn(c, s));
