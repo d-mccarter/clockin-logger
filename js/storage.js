@@ -335,7 +335,7 @@ const ClockerStore = {
       day = { date: isoDate, times: [] };
       data.days.push(day);
     }
-    day.times.push(time24);
+    day.times = TimesFormat.compactAndSortTimes([...(day.times || []), time24]);
     data.days.sort((a, b) => a.date.localeCompare(b.date));
     this.save(data);
     return day;
@@ -348,10 +348,7 @@ const ClockerStore = {
       day = { date: isoDate, times: [] };
       data.days.push(day);
     }
-    day.times = times;
-    while (day.times.length && day.times[day.times.length - 1] == null) {
-      day.times.pop();
-    }
+    day.times = TimesFormat.compactAndSortTimes(times);
     if (!day.times.length) {
       data.days = data.days.filter((d) => d.date !== isoDate);
     }
@@ -373,8 +370,9 @@ const ClockerStore = {
       .map((day) => {
         const remove = byDate.get(day.date);
         if (!remove) return day;
-        const times = day.times.map((t, i) => (remove.has(i) ? null : t));
-        while (times.length && times[times.length - 1] == null) times.pop();
+        const times = TimesFormat.compactAndSortTimes(
+          day.times.filter((_, i) => !remove.has(i))
+        );
         return { ...day, times };
       })
       .filter((day) => day.times.length > 0);

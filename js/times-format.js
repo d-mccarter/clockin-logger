@@ -180,18 +180,30 @@ const TimesFormat = {
     };
   },
 
+  /**
+   * Drop blank punch slots and sort remaining times chronologically.
+   * Keeps in/out pairing aligned with clock order after edits or imports.
+   */
+  compactAndSortTimes(times) {
+    const parsed = (Array.isArray(times) ? times : [])
+      .map((t) => {
+        if (t == null || t === '') return null;
+        if (typeof t === 'number') {
+          const formatted = this.formatTime24(t);
+          const mins = formatted == null ? null : this.parseTimeToken(formatted);
+          return mins == null ? null : { time24: formatted, mins };
+        }
+        const mins = this.parseTimeToken(t);
+        return mins == null ? null : { time24: this.formatTime24(mins), mins };
+      })
+      .filter((t) => t != null);
+    parsed.sort((a, b) => a.mins - b.mins);
+    return parsed.map((t) => t.time24);
+  },
+
   normalizeDay(day = {}) {
     const date = this.parseDateToken(day.date) || day.date;
-    const times = Array.isArray(day.times)
-      ? day.times.map((t) => {
-          if (t == null || t === '') return null;
-          if (typeof t === 'number') return this.formatTime24(t);
-          const mins = this.parseTimeToken(t);
-          return mins == null ? null : this.formatTime24(mins);
-        })
-      : [];
-    // Drop trailing nulls for cleaner storage
-    while (times.length && times[times.length - 1] == null) times.pop();
+    const times = this.compactAndSortTimes(day.times);
     return { date, times };
   },
 

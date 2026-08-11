@@ -51,14 +51,14 @@ JSON shape:
 
 `settings.delaySeconds` is retained for file compatibility but is no longer used by the app.
 
-LabVIEW-compatible `times.txt` is tab-delimited (CRLF), with empty punch cells allowed and no trailing totals column:
+LabVIEW-compatible `times.txt` is tab-delimited (CRLF), padded to a fixed-width time grid with no trailing totals column. Blank punch cells are removed on load/save, and times within each day are kept in chronological order:
 
 ```text
 7/6/2026	8:40 AM	11:39 AM	12:00 PM	5:47 PM					
-7/14/2026	7:50 AM		12:19 PM	12:22 PM	6:14 PM				
+7/14/2026	7:50 AM	12:19 PM	12:22 PM	6:14 PM					
 ```
 
-Total hours in the app = paired in/out differences (empty cells are skipped when pairing).
+Total hours in the app = paired in/out differences in chronological order.
 
 ## GitHub sync (iPhone)
 
